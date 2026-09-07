@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Layers
@@ -388,6 +389,22 @@ private fun DatabaseStatusCard(
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("세션 생성 테스트", fontWeight = FontWeight.Medium)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = viewModel::triggerSync,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("trigger_sync_button"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6750A4),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("수동 동기화 (Sync Queue)", fontWeight = FontWeight.Medium)
             }
         }
     }

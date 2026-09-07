@@ -2,8 +2,13 @@ package com.example.di
 
 import android.content.Context
 import com.example.application.usecase.exercise.CreateExerciseUseCase
+import com.example.application.usecase.exercise.DeleteExerciseUseCase
 import com.example.application.usecase.exercise.ObserveExercisesUseCase
 import com.example.application.usecase.exercise.SearchExercisesUseCase
+import com.example.application.usecase.exercise.UpdateExerciseUseCase
+import com.example.application.usecase.routine.ApplyRoutineTemplateUseCase
+import com.example.application.usecase.routine.CreateRoutineTemplateUseCase
+import com.example.application.usecase.routine.ObserveRoutineTemplatesUseCase
 import com.example.application.usecase.session.CreateWorkoutSessionUseCase
 import com.example.application.usecase.session.DeleteWorkoutSessionUseCase
 import com.example.application.usecase.session.GetWorkoutSessionUseCase
@@ -15,24 +20,30 @@ import com.example.application.usecase.set.ObserveExerciseSetsUseCase
 import com.example.application.usecase.set.UpdateExerciseSetUseCase
 import com.example.domain.repository.ExerciseRepository
 import com.example.domain.repository.ExerciseSetRepository
+import com.example.domain.repository.RoutineTemplateRepository
 import com.example.domain.repository.SyncQueueRepository
 import com.example.domain.repository.WorkoutSessionRepository
 import com.example.infrastructure.db.StrengthLogDatabase
 import com.example.infrastructure.repository.ExerciseRepositoryImpl
 import com.example.infrastructure.repository.ExerciseSetRepositoryImpl
+import com.example.infrastructure.repository.RoutineTemplateRepositoryImpl
 import com.example.infrastructure.repository.SyncQueueRepositoryImpl
 import com.example.infrastructure.repository.WorkoutSessionRepositoryImpl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import com.example.domain.repository.TransactionProvider
 import com.example.infrastructure.repository.RoomTransactionProvider
+import com.example.presentation.timer.RestTimerManager
 
 interface AppContainer {
     val database: StrengthLogDatabase
     val workoutSessionRepository: WorkoutSessionRepository
     val exerciseSetRepository: ExerciseSetRepository
     val exerciseRepository: ExerciseRepository
+    val routineTemplateRepository: RoutineTemplateRepository
     val syncQueueRepository: SyncQueueRepository
+    val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource
+    val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase
     val transactionProvider: TransactionProvider
 
     val createWorkoutSessionUseCase: CreateWorkoutSessionUseCase
@@ -48,13 +59,21 @@ interface AppContainer {
 
     val observeExercisesUseCase: ObserveExercisesUseCase
     val createExerciseUseCase: CreateExerciseUseCase
+    val updateExerciseUseCase: UpdateExerciseUseCase
+    val deleteExerciseUseCase: DeleteExerciseUseCase
     val searchExercisesUseCase: SearchExercisesUseCase
+    
+    val observeRoutineTemplatesUseCase: ObserveRoutineTemplatesUseCase
+    val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase
+    val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase
     
     val statisticsRepository: com.example.domain.repository.StatisticsRepository
     val dataExporter: com.example.domain.repository.DataExporter
     val calculateWorkoutVolumeUseCase: com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase
     val calculatePersonalRecordsUseCase: com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase
     val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase
+
+    val restTimerManager: RestTimerManager
 }
 
 class DefaultAppContainer(
@@ -88,9 +107,23 @@ class DefaultAppContainer(
         )
     }
 
+    override val routineTemplateRepository: RoutineTemplateRepository by lazy {
+        RoutineTemplateRepositoryImpl(
+            database = database,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     override val syncQueueRepository: SyncQueueRepository by lazy {
         SyncQueueRepositoryImpl(
             pendingUploadDao = database.pendingUploadDao(),
+    override val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource by lazy {
+        com.example.infrastructure.repository.FakeRemoteSyncDataSource()
+    }
+
+    override val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase by lazy {
+        com.example.application.usecase.sync.StartSyncWorkUseCase(context)
+    }
             ioDispatcher = ioDispatcher
         )
     }
@@ -134,8 +167,24 @@ class DefaultAppContainer(
     override val createExerciseUseCase: CreateExerciseUseCase by lazy {
         CreateExerciseUseCase(exerciseRepository)
     }
+    override val updateExerciseUseCase: UpdateExerciseUseCase by lazy {
+        UpdateExerciseUseCase(exerciseRepository)
+    }
+    override val deleteExerciseUseCase: DeleteExerciseUseCase by lazy {
+        DeleteExerciseUseCase(exerciseRepository)
+    }
     override val searchExercisesUseCase: SearchExercisesUseCase by lazy {
         SearchExercisesUseCase(exerciseRepository)
+    }
+
+    override val observeRoutineTemplatesUseCase: ObserveRoutineTemplatesUseCase by lazy {
+        ObserveRoutineTemplatesUseCase(routineTemplateRepository)
+    }
+    override val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase by lazy {
+        CreateRoutineTemplateUseCase(routineTemplateRepository)
+    }
+    override val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase by lazy {
+        ApplyRoutineTemplateUseCase(routineTemplateRepository, exerciseSetRepository, workoutSessionRepository, transactionProvider)
     }
 
     override val statisticsRepository: com.example.domain.repository.StatisticsRepository by lazy {
@@ -152,5 +201,9 @@ class DefaultAppContainer(
     }
     override val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase by lazy {
         com.example.application.usecase.statistics.ExportWorkoutDataUseCase(dataExporter)
+    }
+
+    override val restTimerManager: RestTimerManager by lazy {
+        RestTimerManager()
     }
 }

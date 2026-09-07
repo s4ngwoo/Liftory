@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 @Database(
     entities = [
         WorkoutSessionEntity::class,
+        com.example.infrastructure.db.entity.RoutineTemplateEntity::class,
+        com.example.infrastructure.db.entity.ExercisePresetEntity::class,
         ExerciseSetEntity::class,
         ExerciseEntity::class,
         PendingUploadEntity::class
@@ -32,6 +34,7 @@ abstract class StrengthLogDatabase : RoomDatabase() {
     abstract fun exerciseSetDao(): ExerciseSetDao
     abstract fun exerciseDao(): ExerciseDao
     abstract fun pendingUploadDao(): PendingUploadDao
+    abstract fun routineTemplateDao(): com.example.infrastructure.db.dao.RoutineTemplateDao
 
     companion object {
         private const val DATABASE_NAME = "strength_log.db"

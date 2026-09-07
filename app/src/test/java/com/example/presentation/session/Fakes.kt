@@ -9,11 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 class FakeSessionRepository : WorkoutSessionRepository {
+    val sessions = mutableListOf<WorkoutSession>()
     var updatedSession: WorkoutSession? = null
 
     override suspend fun create(session: WorkoutSession): Result<WorkoutSession> = Result.success(session)
     override suspend fun getById(id: String): WorkoutSession? {
-        return WorkoutSession(id = id, startTime = 0L, endTime = null, notes = "", createdAt = 0L, updatedAt = 0L)
+        return sessions.find { it.id == id } ?: WorkoutSession(id = id, startTime = 0L, endTime = null, notes = "", createdAt = 0L, updatedAt = 0L)
     }
     override suspend fun update(session: WorkoutSession): Result<Unit> {
         updatedSession = session
@@ -24,10 +25,12 @@ class FakeSessionRepository : WorkoutSessionRepository {
 }
 
 class FakeSetRepository : ExerciseSetRepository {
+    val createdSets = mutableListOf<ExerciseSet>()
     var createdSet: ExerciseSet? = null
 
     override suspend fun create(set: ExerciseSet): Result<ExerciseSet> {
         createdSet = set
+        createdSets.add(set)
         return Result.success(set)
     }
     override suspend fun update(set: ExerciseSet): Result<Unit> = Result.success(Unit)

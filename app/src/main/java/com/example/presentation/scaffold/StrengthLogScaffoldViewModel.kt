@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.application.usecase.exercise.ObserveExercisesUseCase
 import com.example.application.usecase.session.CreateWorkoutSessionUseCase
 import com.example.application.usecase.session.ObserveWorkoutSessionsUseCase
+import com.example.application.usecase.sync.StartSyncWorkUseCase
 import com.example.domain.model.Exercise
 import com.example.domain.model.WorkoutSession
 import com.example.domain.repository.SyncQueueRepository
@@ -30,7 +31,8 @@ class StrengthLogScaffoldViewModel(
     private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
     private val observeExercisesUseCase: ObserveExercisesUseCase,
     private val createSessionUseCase: CreateWorkoutSessionUseCase,
-    private val syncQueueRepository: SyncQueueRepository
+    private val syncQueueRepository: SyncQueueRepository,
+    private val startSyncWorkUseCase: StartSyncWorkUseCase
 ) : ViewModel() {
 
     private val _actionMessage = MutableStateFlow<String?>("Clean Architecture Scaffolding Ready")
@@ -65,11 +67,17 @@ class StrengthLogScaffoldViewModel(
         }
     }
 
+    fun triggerSync() {
+        startSyncWorkUseCase()
+        _actionMessage.value = "Sync worker enqueued"
+    }
+
     class Factory(
         private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
         private val observeExercisesUseCase: ObserveExercisesUseCase,
         private val createSessionUseCase: CreateWorkoutSessionUseCase,
-        private val syncQueueRepository: SyncQueueRepository
+        private val syncQueueRepository: SyncQueueRepository,
+        private val startSyncWorkUseCase: StartSyncWorkUseCase
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -77,7 +85,8 @@ class StrengthLogScaffoldViewModel(
                 observeSessionsUseCase,
                 observeExercisesUseCase,
                 createSessionUseCase,
-                syncQueueRepository
+                syncQueueRepository,
+                startSyncWorkUseCase
             ) as T
         }
     }
