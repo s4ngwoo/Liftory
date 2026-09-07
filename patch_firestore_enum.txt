@@ -1,0 +1,2 @@
+sed -i 's/EntityType.EXERCISE_SET/EntityType.SET/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt
+sed -i 's/EntityType.ROUTINE_TEMPLATE/EntityType.ROUTINE/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt

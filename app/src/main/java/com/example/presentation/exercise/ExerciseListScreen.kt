@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,7 +20,8 @@ import com.example.domain.model.Exercise
 @Composable
 fun ExerciseListScreen(
     viewModel: ExerciseViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onExerciseSelected: ((Exercise) -> Unit)? = null
 ) {
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
@@ -63,7 +65,7 @@ fun ExerciseListScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(exercises) { exercise ->
-                    ExerciseCard(exercise = exercise)
+                    ExerciseCard(exercise = exercise, onClick = { onExerciseSelected?.invoke(exercise) })
                 }
             }
         }
@@ -81,9 +83,9 @@ fun ExerciseListScreen(
 }
 
 @Composable
-fun ExerciseCard(exercise: Exercise) {
+fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(

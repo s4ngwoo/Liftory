@@ -33,7 +33,7 @@ class CreateExerciseUseCase(
 class SearchExercisesUseCase(
     private val exerciseRepository: ExerciseRepository
 ) {
-    suspend operator fun invoke(query: String): List<Exercise> {
+    operator fun invoke(query: String): Flow<List<Exercise>> {
         return exerciseRepository.search(query)
     }
 }

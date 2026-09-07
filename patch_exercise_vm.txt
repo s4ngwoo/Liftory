@@ -1,0 +1,1 @@
+sed -i 's/_exercises.value = searchExercisesUseCase(query)/searchExercisesUseCase(query).collect { _exercises.value = it }/g' app/src/main/java/com/example/presentation/exercise/ExerciseViewModel.kt

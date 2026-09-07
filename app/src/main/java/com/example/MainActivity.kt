@@ -22,7 +22,10 @@ class MainActivity : ComponentActivity() {
       observeSessionsUseCase = container.observeWorkoutSessionsUseCase,
       observeExercisesUseCase = container.observeExercisesUseCase,
       createSessionUseCase = container.createWorkoutSessionUseCase,
-      syncQueueRepository = container.syncQueueRepository
+      syncQueueRepository = container.syncQueueRepository,
+      startSyncWorkUseCase = container.startSyncWorkUseCase,
+      createExerciseUseCase = container.createExerciseUseCase,
+      addExerciseSetUseCase = container.addExerciseSetUseCase
     )
   }
 

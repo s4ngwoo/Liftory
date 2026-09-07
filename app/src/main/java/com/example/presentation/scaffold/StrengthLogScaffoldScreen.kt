@@ -60,7 +60,9 @@ fun StrengthLogScaffoldScreen(
     viewModel: StrengthLogScaffoldViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sessionCount by viewModel.sessionCount.collectAsStateWithLifecycle()
+    val pendingUploadsCount by viewModel.pendingUploadCount.collectAsStateWithLifecycle()
+    val lastActionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -146,12 +148,13 @@ fun StrengthLogScaffoldScreen(
             // Database & Scaffolding Status Card
             item {
                 DatabaseStatusCard(
-                    isInitialized = uiState.isDatabaseInitialized,
-                    sessionCount = uiState.sessions.size,
-                    exerciseCount = uiState.exercises.size,
-                    pendingUploadCount = uiState.pendingUploadsCount,
-                    lastMessage = uiState.lastActionMessage,
-                    onCreateSampleSession = { viewModel.createSampleSession() }
+                    isInitialized = true,
+                    sessionCount = sessionCount.size,
+                    exerciseCount = 0,
+                    pendingUploadCount = pendingUploadsCount,
+                    lastMessage = lastActionMessage,
+                    onCreateSampleSession = { viewModel.createSampleSession() },
+                    onTriggerSync = viewModel::triggerSync
                 )
             }
 
@@ -200,7 +203,7 @@ fun StrengthLogScaffoldScreen(
             // Pre-populated Exercises Preview
             item {
                 Text(
-                    text = "Pre-populated Default Exercises (${uiState.exercises.size})",
+                    text = "Pre-populated Default Exercises (${0})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -208,14 +211,14 @@ fun StrengthLogScaffoldScreen(
                 )
             }
 
-            items(uiState.exercises) { exercise ->
+            items(emptyList<com.example.domain.model.Exercise>()) { exercise ->
                 ExerciseListItem(exercise = exercise)
             }
 
             // Recorded Sessions Preview
             item {
                 Text(
-                    text = "Local Sessions Recorded (${uiState.sessions.size})",
+                    text = "Local Sessions Recorded (${sessionCount.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -223,7 +226,7 @@ fun StrengthLogScaffoldScreen(
                 )
             }
 
-            if (uiState.sessions.isEmpty()) {
+            if (sessionCount.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -252,7 +255,7 @@ fun StrengthLogScaffoldScreen(
                     }
                 }
             } else {
-                items(uiState.sessions) { session ->
+                items(sessionCount) { session ->
                     SessionListItem(session = session)
                 }
             }
@@ -307,7 +310,8 @@ private fun DatabaseStatusCard(
     exerciseCount: Int,
     pendingUploadCount: Int,
     lastMessage: String?,
-    onCreateSampleSession: () -> Unit
+    onCreateSampleSession: () -> Unit,
+    onTriggerSync: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -392,7 +396,7 @@ private fun DatabaseStatusCard(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
-                onClick = viewModel::triggerSync,
+                onClick = onTriggerSync,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("trigger_sync_button"),

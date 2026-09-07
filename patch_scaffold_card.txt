@@ -1,0 +1,3 @@
+sed -i 's/onCreateSampleSession: () -> Unit/onCreateSampleSession: () -> Unit,\n    onTriggerSync: () -> Unit/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/viewModel::triggerSync/onTriggerSync/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/onCreateSampleSession = { viewModel.createSampleSession() }/onCreateSampleSession = { viewModel.createSampleSession() },\n                    onTriggerSync = viewModel::triggerSync/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt

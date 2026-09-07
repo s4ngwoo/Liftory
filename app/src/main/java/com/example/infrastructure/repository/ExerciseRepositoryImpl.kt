@@ -84,6 +84,21 @@ class ExerciseRepositoryImpl(
         }
     }
 
+    override suspend fun getById(id: String): Result<Exercise> = withContext(ioDispatcher) {
+        runCatching {
+            val entity = exerciseDao.getById(id) ?: throw Exception("Exercise not found")
+            entity.toDomain()
+        }
+    }
+
+    override fun search(query: String): Flow<List<Exercise>> {
+        return exerciseDao.searchByName("%$query%").map { list -> list.map { it.toDomain() } }
+    }
+
+    override fun getExercisesByCategory(category: String): Flow<List<Exercise>> {
+        return exerciseDao.getExercisesByCategory(category).map { list -> list.map { it.toDomain() } }
+    }
+
     override fun observeAll(): Flow<List<Exercise>> {
         return exerciseDao.observeAll().map { list ->
             list.map { it.toDomain() }

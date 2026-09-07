@@ -42,6 +42,7 @@ interface AppContainer {
     val exerciseRepository: ExerciseRepository
     val routineTemplateRepository: RoutineTemplateRepository
     val syncQueueRepository: SyncQueueRepository
+    val authRepository: com.example.domain.repository.AuthRepository
     val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource
     val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase
     val transactionProvider: TransactionProvider
@@ -87,22 +88,23 @@ class DefaultAppContainer(
 
     override val workoutSessionRepository: WorkoutSessionRepository by lazy {
         WorkoutSessionRepositoryImpl(
-            sessionDao = database.workoutSessionDao(),
-            setDao = database.exerciseSetDao(),
+            db = database,
+            
             ioDispatcher = ioDispatcher
         )
     }
 
     override val exerciseSetRepository: ExerciseSetRepository by lazy {
         ExerciseSetRepositoryImpl(
-            setDao = database.exerciseSetDao(),
+            db = database,
+            
             ioDispatcher = ioDispatcher
         )
     }
 
     override val exerciseRepository: ExerciseRepository by lazy {
         ExerciseRepositoryImpl(
-            exerciseDao = database.exerciseDao(),
+            db = database,
             ioDispatcher = ioDispatcher
         )
     }
@@ -117,15 +119,19 @@ class DefaultAppContainer(
     override val syncQueueRepository: SyncQueueRepository by lazy {
         SyncQueueRepositoryImpl(
             pendingUploadDao = database.pendingUploadDao(),
-    override val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource by lazy {
-        com.example.infrastructure.repository.FakeRemoteSyncDataSource()
-    }
-
-    override val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase by lazy {
-        com.example.application.usecase.sync.StartSyncWorkUseCase(context)
-    }
             ioDispatcher = ioDispatcher
         )
+    }
+
+    override val authRepository: com.example.domain.repository.AuthRepository by lazy {
+        com.example.infrastructure.repository.FirebaseAuthRepositoryImpl()
+    }
+
+    override val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource by lazy {
+        com.example.infrastructure.repository.FirestoreSyncDataSource(authRepository = authRepository)
+    }
+    override val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase by lazy {
+        com.example.application.usecase.sync.StartSyncWorkUseCase(context)
     }
     
     override val transactionProvider: TransactionProvider by lazy {

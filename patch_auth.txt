@@ -1,0 +1,2 @@
+sed -i 's/import com.example.domain.model.AuthState//g' app/src/main/java/com/example/presentation/auth/LoginScreen.kt
+sed -i 's/AuthState/com.example.presentation.auth.AuthState/g' app/src/main/java/com/example/presentation/auth/LoginScreen.kt

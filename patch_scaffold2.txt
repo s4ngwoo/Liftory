@@ -1,0 +1,7 @@
+sed -i 's/uiState.isDatabaseInitialized/true/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.sessions.size/sessionCount.size/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.exercises.size/0/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.pendingUploadsCount/pendingUploadsCount/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.lastActionMessage/lastActionMessage/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.exercises/emptyList<com.example.domain.model.Exercise>()/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt
+sed -i 's/uiState.sessions/sessionCount/g' app/src/main/java/com/example/presentation/scaffold/StrengthLogScaffoldScreen.kt

@@ -17,7 +17,9 @@ interface ExerciseDao {
     suspend fun getById(id: String): ExerciseEntity?
 
     @Query("SELECT * FROM exercises WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
-    suspend fun searchByName(query: String): List<ExerciseEntity>
+    fun searchByName(query: String): Flow<List<ExerciseEntity>>
+    @Query("SELECT * FROM exercises WHERE muscleGroup = :category ORDER BY name ASC")
+    fun getExercisesByCategory(category: String): Flow<List<ExerciseEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(exercise: ExerciseEntity)

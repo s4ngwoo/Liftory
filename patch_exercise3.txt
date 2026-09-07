@@ -1,0 +1,3 @@
+sed -i 's/observeAll()/getAllExercises()/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt
+sed -i 's/search(/searchExercises(/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt
+sed -i 's/create(/insert(/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt

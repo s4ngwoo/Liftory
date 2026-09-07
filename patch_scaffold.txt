@@ -1,0 +1,11 @@
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StrengthLogScaffoldScreen(
+    viewModel: StrengthLogScaffoldViewModel,
+    modifier: Modifier = Modifier
+) {
+    val sessionCount by viewModel.sessionCount.collectAsStateWithLifecycle()
+    val pendingUploadsCount by viewModel.pendingUploadCount.collectAsStateWithLifecycle()
+    val lastActionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
+
+    Scaffold(

@@ -1,0 +1,28 @@
+    fun createSampleSession() {
+        viewModelScope.launch {
+            val sessionResult = createSessionUseCase(notes = "하체 훈련 (Squat 120kg 목표)")
+            if (sessionResult.isSuccess) {
+                val session = sessionResult.getOrNull()!!
+                
+                // Create Exercises
+                val squatEx = createExerciseUseCase("스쿼트", "하체").getOrNull()
+                val benchEx = createExerciseUseCase("벤치프레스", "가슴").getOrNull()
+                
+                if (squatEx != null) {
+                    addExerciseSetUseCase(session.id, squatEx.id, 100.0, 8, null, 90, 0)
+                    addExerciseSetUseCase(session.id, squatEx.id, 110.0, 5, null, 120, 1)
+                    addExerciseSetUseCase(session.id, squatEx.id, 120.0, 3, 8.5, 180, 2)
+                }
+                
+                if (benchEx != null) {
+                    addExerciseSetUseCase(session.id, benchEx.id, 80.0, 10, null, 90, 3)
+                    addExerciseSetUseCase(session.id, benchEx.id, 90.0, 5, null, 120, 4)
+                    addExerciseSetUseCase(session.id, benchEx.id, 100.0, 5, 9.0, 180, 5)
+                }
+                
+                _actionMessage.value = "실제 운동 기록 생성 완료 (Session: ${session.id.take(8)})"
+            } else {
+                _actionMessage.value = "Error: ${sessionResult.exceptionOrNull()?.message}"
+            }
+        }
+    }

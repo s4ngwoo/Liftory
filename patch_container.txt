@@ -1,0 +1,14 @@
+    override val syncQueueRepository: SyncQueueRepository by lazy {
+        SyncQueueRepositoryImpl(
+            pendingUploadDao = database.pendingUploadDao(),
+            dispatcher = ioDispatcher
+        )
+    }
+
+    override val authRepository: com.example.domain.repository.AuthRepository by lazy {
+        com.example.infrastructure.repository.FirebaseAuthRepositoryImpl()
+    }
+
+    override val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource by lazy {
+        com.example.infrastructure.repository.FirestoreSyncDataSource(authRepository = authRepository)
+    }

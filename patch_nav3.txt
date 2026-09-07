@@ -1,0 +1,16 @@
+            val exerciseViewModel = viewModel<com.example.presentation.exercise.ExerciseViewModel>(
+                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                        return com.example.presentation.exercise.ExerciseViewModel(
+                            appContainer.observeExercisesUseCase,
+                            appContainer.createExerciseUseCase,
+                            appContainer.searchExercisesUseCase
+                        ) as T
+                    }
+                }
+            )
+            WorkoutSessionDetailScreen(
+                viewModel = sessionViewModel,
+                exerciseViewModel = exerciseViewModel,
+                onBack = { navController.popBackStack() }
+            )

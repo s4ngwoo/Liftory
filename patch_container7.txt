@@ -1,0 +1,1 @@
+sed -i 's/db = database,/database = database,/g' app/src/main/java/com/example/di/AppContainer.kt

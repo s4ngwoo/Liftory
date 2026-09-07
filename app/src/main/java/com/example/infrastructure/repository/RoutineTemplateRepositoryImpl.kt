@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import com.example.infrastructure.db.mapper.toEntity
+import com.example.infrastructure.db.mapper.toDomain
 
 class RoutineTemplateRepositoryImpl(
     private val database: StrengthLogDatabase,

@@ -13,3 +13,4 @@ class StrengthLogApplication : Application() {
         container = DefaultAppContainer(this)
     }
 }
+// force recompile

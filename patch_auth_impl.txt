@@ -1,0 +1,3 @@
+sed -i 's/import com.example.domain.model.AuthState/import com.example.presentation.auth.AuthState/g' app/src/main/java/com/example/infrastructure/repository/FirebaseAuthRepositoryImpl.kt
+sed -i 's/AuthState.Initial/AuthState.Unauthenticated/g' app/src/main/java/com/example/infrastructure/repository/FirebaseAuthRepositoryImpl.kt
+sed -i 's/displayName = user.displayName//g' app/src/main/java/com/example/infrastructure/repository/FirebaseAuthRepositoryImpl.kt

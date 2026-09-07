@@ -50,7 +50,7 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback(scope))
-                    .fallbackToDestructiveMigration(dropAllTables = false)
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

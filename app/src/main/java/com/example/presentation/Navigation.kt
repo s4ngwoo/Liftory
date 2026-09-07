@@ -6,17 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.di.AppContainer
-import com.example.presentation.exercise.ExerciseListScreen
-import com.example.presentation.exercise.ExerciseViewModel
-import com.example.presentation.routine.RoutineTemplateListScreen
-import com.example.presentation.routine.RoutineTemplateViewModel
-import com.example.presentation.scaffold.StrengthLogScaffoldScreen
-import com.example.presentation.scaffold.StrengthLogScaffoldViewModel
 import com.example.presentation.session.WorkoutSessionDetailScreen
 import com.example.presentation.session.WorkoutSessionViewModel
-import com.example.presentation.statistics.StatisticsDashboardScreen
-import com.example.presentation.statistics.StatisticsViewModel
-import com.example.presentation.timer.RestTimerScreen
 
 @Composable
 fun AppNavigation(
@@ -25,26 +16,29 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "scaffold"
+        startDestination = "login"
     ) {
-        composable("scaffold") {
-            val scaffoldViewModel = viewModel<StrengthLogScaffoldViewModel>(
-                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                        return StrengthLogScaffoldViewModel(
-                            appContainer.observeWorkoutSessionsUseCase,
-                            appContainer.observeExercisesUseCase,
-                            appContainer.createWorkoutSessionUseCase,
-                            appContainer.syncQueueRepository, appContainer.startSyncWorkUseCase
-                        ) as T
+        composable("login") {
+            val authViewModel = viewModel<com.example.presentation.auth.AuthViewModel>(
+                factory = com.example.presentation.auth.AuthViewModel.Factory(appContainer.authRepository)
+            )
+            com.example.presentation.auth.LoginScreen(
+                viewModel = authViewModel,
+                onNavigateToHome = {
+                    navController.navigate("scaffold") {
+                        popUpTo("login") { inclusive = true }
                     }
                 }
             )
-            StrengthLogScaffoldScreen(
-                viewModel = scaffoldViewModel
+        }
+        composable("scaffold") {
+            com.example.presentation.MainScreen(
+                appContainer = appContainer,
+                onNavigateToSessionDetail = { sessionId ->
+                    navController.navigate("session/$sessionId")
+                }
             )
         }
-
         composable("session/{sessionId}") { backStackEntry ->
             val sessionId = backStackEntry.arguments?.getString("sessionId") ?: return@composable
             val sessionViewModel = viewModel<WorkoutSessionViewModel>(
@@ -59,8 +53,20 @@ fun AppNavigation(
                     }
                 }
             )
+            val exerciseViewModel = viewModel<com.example.presentation.exercise.ExerciseViewModel>(
+                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                        return com.example.presentation.exercise.ExerciseViewModel(
+                            appContainer.observeExercisesUseCase,
+                            appContainer.createExerciseUseCase,
+                            appContainer.searchExercisesUseCase
+                        ) as T
+                    }
+                }
+            )
             WorkoutSessionDetailScreen(
                 viewModel = sessionViewModel,
+                exerciseViewModel = exerciseViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

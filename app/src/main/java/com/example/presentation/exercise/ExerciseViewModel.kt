@@ -43,7 +43,7 @@ class ExerciseViewModel(
             return
         }
         viewModelScope.launch {
-            _exercises.value = searchExercisesUseCase(query)
+            searchExercisesUseCase(query).collect { _exercises.value = it }
         }
     }
 

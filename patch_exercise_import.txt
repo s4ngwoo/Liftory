@@ -1,0 +1,1 @@
+sed -i '/import androidx.compose.ui.Modifier/i \import androidx.compose.foundation.clickable' app/src/main/java/com/example/presentation/exercise/ExerciseListScreen.kt

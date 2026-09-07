@@ -25,12 +25,15 @@ import com.example.domain.model.ExerciseSet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutSessionDetailScreen(
+    exerciseViewModel: com.example.presentation.exercise.ExerciseViewModel,
     viewModel: WorkoutSessionViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sets by viewModel.currentSessionSets.collectAsStateWithLifecycle()
     var showEditorSheet by remember { mutableStateOf(false) }
+    var showExerciseSelection by remember { mutableStateOf(false) }
+    var selectedExerciseId by remember { mutableStateOf<String?>(null) }
 
     // Group sets by exerciseId for Bento Grid display
     val groupedSets = sets.groupBy { it.exerciseId }
@@ -53,7 +56,7 @@ fun WorkoutSessionDetailScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showEditorSheet = true },
+                onClick = { showExerciseSelection = true },
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
@@ -89,11 +92,22 @@ fun WorkoutSessionDetailScreen(
     }
 
     if (showEditorSheet) {
+    if (showExerciseSelection) {
+        ExerciseSelectionSheet(
+            viewModel = exerciseViewModel,
+            onExerciseSelected = { exercise ->
+                selectedExerciseId = exercise.id
+                showExerciseSelection = false
+                showEditorSheet = true
+            },
+            onDismissRequest = { showExerciseSelection = false }
+        )
+    }
         ExerciseSetEditorSheet(
             onDismissRequest = { showEditorSheet = false },
             onSaveSet = { weight, reps, rpe ->
                 // Basic stub for exerciseId. In Sprint 2, this will be selected via an Exercise Picker.
-                viewModel.addSet("ex_squat", weight, reps, rpe)
+                selectedExerciseId?.let { viewModel.addSet(it, weight, reps, rpe) }
                 showEditorSheet = false
             }
         )
