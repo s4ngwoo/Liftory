@@ -1,0 +1,156 @@
+package com.example.di
+
+import android.content.Context
+import com.example.application.usecase.exercise.CreateExerciseUseCase
+import com.example.application.usecase.exercise.ObserveExercisesUseCase
+import com.example.application.usecase.exercise.SearchExercisesUseCase
+import com.example.application.usecase.session.CreateWorkoutSessionUseCase
+import com.example.application.usecase.session.DeleteWorkoutSessionUseCase
+import com.example.application.usecase.session.GetWorkoutSessionUseCase
+import com.example.application.usecase.session.ObserveWorkoutSessionsUseCase
+import com.example.application.usecase.session.UpdateWorkoutSessionUseCase
+import com.example.application.usecase.set.AddExerciseSetUseCase
+import com.example.application.usecase.set.DeleteExerciseSetUseCase
+import com.example.application.usecase.set.ObserveExerciseSetsUseCase
+import com.example.application.usecase.set.UpdateExerciseSetUseCase
+import com.example.domain.repository.ExerciseRepository
+import com.example.domain.repository.ExerciseSetRepository
+import com.example.domain.repository.SyncQueueRepository
+import com.example.domain.repository.WorkoutSessionRepository
+import com.example.infrastructure.db.StrengthLogDatabase
+import com.example.infrastructure.repository.ExerciseRepositoryImpl
+import com.example.infrastructure.repository.ExerciseSetRepositoryImpl
+import com.example.infrastructure.repository.SyncQueueRepositoryImpl
+import com.example.infrastructure.repository.WorkoutSessionRepositoryImpl
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import com.example.domain.repository.TransactionProvider
+import com.example.infrastructure.repository.RoomTransactionProvider
+
+interface AppContainer {
+    val database: StrengthLogDatabase
+    val workoutSessionRepository: WorkoutSessionRepository
+    val exerciseSetRepository: ExerciseSetRepository
+    val exerciseRepository: ExerciseRepository
+    val syncQueueRepository: SyncQueueRepository
+    val transactionProvider: TransactionProvider
+
+    val createWorkoutSessionUseCase: CreateWorkoutSessionUseCase
+    val getWorkoutSessionUseCase: GetWorkoutSessionUseCase
+    val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase
+    val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase
+    val observeWorkoutSessionsUseCase: ObserveWorkoutSessionsUseCase
+
+    val addExerciseSetUseCase: AddExerciseSetUseCase
+    val updateExerciseSetUseCase: UpdateExerciseSetUseCase
+    val deleteExerciseSetUseCase: DeleteExerciseSetUseCase
+    val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase
+
+    val observeExercisesUseCase: ObserveExercisesUseCase
+    val createExerciseUseCase: CreateExerciseUseCase
+    val searchExercisesUseCase: SearchExercisesUseCase
+    
+    val statisticsRepository: com.example.domain.repository.StatisticsRepository
+    val dataExporter: com.example.domain.repository.DataExporter
+    val calculateWorkoutVolumeUseCase: com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase
+    val calculatePersonalRecordsUseCase: com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase
+    val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase
+}
+
+class DefaultAppContainer(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AppContainer {
+
+    override val database: StrengthLogDatabase by lazy {
+        StrengthLogDatabase.getInstance(context)
+    }
+
+    override val workoutSessionRepository: WorkoutSessionRepository by lazy {
+        WorkoutSessionRepositoryImpl(
+            sessionDao = database.workoutSessionDao(),
+            setDao = database.exerciseSetDao(),
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val exerciseSetRepository: ExerciseSetRepository by lazy {
+        ExerciseSetRepositoryImpl(
+            setDao = database.exerciseSetDao(),
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val exerciseRepository: ExerciseRepository by lazy {
+        ExerciseRepositoryImpl(
+            exerciseDao = database.exerciseDao(),
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val syncQueueRepository: SyncQueueRepository by lazy {
+        SyncQueueRepositoryImpl(
+            pendingUploadDao = database.pendingUploadDao(),
+            ioDispatcher = ioDispatcher
+        )
+    }
+    
+    override val transactionProvider: TransactionProvider by lazy {
+        RoomTransactionProvider(database)
+    }
+
+    override val createWorkoutSessionUseCase: CreateWorkoutSessionUseCase by lazy {
+        CreateWorkoutSessionUseCase(workoutSessionRepository)
+    }
+    override val getWorkoutSessionUseCase: GetWorkoutSessionUseCase by lazy {
+        GetWorkoutSessionUseCase(workoutSessionRepository)
+    }
+    override val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase by lazy {
+        UpdateWorkoutSessionUseCase(workoutSessionRepository)
+    }
+    override val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase by lazy {
+        DeleteWorkoutSessionUseCase(workoutSessionRepository)
+    }
+    override val observeWorkoutSessionsUseCase: ObserveWorkoutSessionsUseCase by lazy {
+        ObserveWorkoutSessionsUseCase(workoutSessionRepository)
+    }
+
+    override val addExerciseSetUseCase: AddExerciseSetUseCase by lazy {
+        AddExerciseSetUseCase(exerciseSetRepository, workoutSessionRepository, transactionProvider)
+    }
+    override val updateExerciseSetUseCase: UpdateExerciseSetUseCase by lazy {
+        UpdateExerciseSetUseCase(exerciseSetRepository, workoutSessionRepository, transactionProvider)
+    }
+    override val deleteExerciseSetUseCase: DeleteExerciseSetUseCase by lazy {
+        DeleteExerciseSetUseCase(exerciseSetRepository, workoutSessionRepository, transactionProvider)
+    }
+    override val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase by lazy {
+        ObserveExerciseSetsUseCase(exerciseSetRepository)
+    }
+
+    override val observeExercisesUseCase: ObserveExercisesUseCase by lazy {
+        ObserveExercisesUseCase(exerciseRepository)
+    }
+    override val createExerciseUseCase: CreateExerciseUseCase by lazy {
+        CreateExerciseUseCase(exerciseRepository)
+    }
+    override val searchExercisesUseCase: SearchExercisesUseCase by lazy {
+        SearchExercisesUseCase(exerciseRepository)
+    }
+
+    override val statisticsRepository: com.example.domain.repository.StatisticsRepository by lazy {
+        com.example.infrastructure.repository.StatisticsRepositoryImpl(database.exerciseSetDao(), ioDispatcher)
+    }
+    override val dataExporter: com.example.domain.repository.DataExporter by lazy {
+        com.example.infrastructure.export.DataExporterImpl(database.workoutSessionDao(), database.exerciseSetDao(), ioDispatcher)
+    }
+    override val calculateWorkoutVolumeUseCase: com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase by lazy {
+        com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase(statisticsRepository)
+    }
+    override val calculatePersonalRecordsUseCase: com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase by lazy {
+        com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase(statisticsRepository)
+    }
+    override val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase by lazy {
+        com.example.application.usecase.statistics.ExportWorkoutDataUseCase(dataExporter)
+    }
+}
