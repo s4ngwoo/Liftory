@@ -1,5 +1,5 @@
 {
-  "name": "Strength Log",
+  "name": "Liftory",
   "description": "오프라인 우선 근력 운동 기록 및 통계 앱 (Clean Architecture)",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

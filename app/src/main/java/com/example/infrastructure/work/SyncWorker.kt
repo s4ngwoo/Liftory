@@ -4,18 +4,25 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.StrengthLogApplication
 import com.example.domain.repository.RemoteSyncDataSource
 import com.example.domain.repository.SyncQueueRepository
 
 class SyncWorker(
     appContext: Context,
-    workerParams: WorkerParameters,
-    private val syncQueueRepository: SyncQueueRepository,
-    private val remoteSyncDataSource: RemoteSyncDataSource
+    workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         Log.d("SyncWorker", "Starting sync work")
+        val app = applicationContext as? StrengthLogApplication
+        if (app == null) {
+             Log.e("SyncWorker", "Application is not StrengthLogApplication")
+             return Result.failure()
+        }
+        val syncQueueRepository = app.container.syncQueueRepository
+        val remoteSyncDataSource = app.container.remoteSyncDataSource
+        
         return try {
             val pendingList = syncQueueRepository.getNextPending(20)
             if (pendingList.isEmpty()) {
@@ -24,7 +31,6 @@ class SyncWorker(
             }
 
             var hasFailures = false
-
             for (pending in pendingList) {
                 // Ignore items with high retry count for now to avoid infinite loops
                 if (pending.retryCount >= 5) {
@@ -42,7 +48,6 @@ class SyncWorker(
                         Log.e("SyncWorker", "Failed to sync item ${pending.id}", error)
                     }
             }
-
             if (hasFailures) {
                 Result.retry()
             } else {

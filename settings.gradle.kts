@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Strength Log"
+rootProject.name = "Liftory"
 
 include(":app")
