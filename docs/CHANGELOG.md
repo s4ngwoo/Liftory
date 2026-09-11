@@ -30,6 +30,12 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 - In-App Persistent Workout Timer Banner: Prominent top banner displayed across all main app tabs during an ongoing workout, showing real-time ticking elapsed time and a one-touch `[운동 복귀 >]` quick navigation button.
 - System Status Bar Chronometer Notification: Native Android Foreground Service (`WorkoutTimerService`) displaying an OS-managed ticking chronometer in the system status bar when switching to other apps or leaving the screen, with zero CPU wake battery drain and 1-tap return to the session.
 - Reactive Active Workout Tracking (`ObserveActiveWorkoutSessionUseCase`): Clean architecture domain UseCase & repository flow for reactive real-time workout session tracking.
+- Cardio Exercise Library & Dedicated Set Logging UX:
+  - Added 6 default cardio exercises: Treadmill (러닝머신 - DRAX), StairMaster (천국의 계단 / 스텝밀 - Matrix), Stationary Cycle (실내 사이클 - Concept2), Incline Treadmill (마이마운틴 / 인클라인 러닝 - MyMountain), Elliptical (일립티컬 - Life Fitness), and Rowing Machine (로잉머신 - Concept2).
+  - Extended domain `EquipmentType` with `CARDIO` and `isCardio` helper property.
+  - Dedicated `[🏃 유산소]` filter chips across Exercise Library, Custom Exercise Dialog, and Routine Template Exercise Picker.
+  - Smart Set Editor: automatically transitions labels from "Weight / Reps" to "Speed·Level / Time (min)", hides irrelevant 1RM badge, and provides "+5min / +10min / +15min" quick delta chips.
+  - Cardio Exercise Group Cards in session detail displaying sets as "속도 6.0 · 20분" and table header "Set | 속도/레벨 | 시간(분) | RPE".
 
 ### Changed
 - Sessions Screen FAB: Hide redundant bottom-right `+` Floating Action Button when sessions list is empty, keeping only the prominent central "Start Today's Workout" card button.
