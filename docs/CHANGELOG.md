@@ -11,6 +11,10 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
+- Navigation & Terminology Standardization: Differentiated bottom navigation bar icons with clear Korean labels ("운동", "루틴", "종목 도감", "통계"), replacing duplicate dumbbell icons and English tags.
+- Date/Time & Default Title Localization: Formatted session dates to Korean standard ("M월 d일 (E) · 시작 HH:mm · N분 완료"), generated user-friendly default session titles ("M월 d일 운동"), and replaced arbitrary text truncation with dedicated completion status check icons.
+- Routine Library & Editor Enhancements: Compacted routine preview lists to 3 items with an "외 N개" summary, streamlined CTA to "이 루틴으로 시작", and added exercise reordering arrows (up/down) and smart cardio target labels in the routine editor modal.
+- Warm Completion Dialog Tone: Rephrased finish workout confirmation with gentle guidance ("운동을 마칠까요?" and "운동 마치기").
 - Primary CTA Consolidation & Empty Session Overload Elimination: Eliminated 5 competing buttons on newly started sessions (`sets.isEmpty()`) in favor of a single focused welcome card with `[+ 첫 운동 추가]`, hiding the top bar finish button, dashboard set-complete button, and floating action button until exercises are added.
 - Set Editor Input Modernization & Unit Clarity: Expanded weight and reps into a prominent 2-column input grid with explicit units (`+1.0 kg`, `+2.5 kg`, `+5.0 kg`, `+10.0 kg` / `+1 회`, `+2 회`, `+5 회` / `+5분`, `+10분`), moved RPE intensity into an optional secondary section with one-touch preset chips.
 - Exercise Picker Separation: Separated exercise selection for session from exercise creation, changing the top bar title to "운동 선택", adding a distinct text action button for creating new exercises, hiding the FAB in picker mode, and adding explicit `[+ 추가]` buttons on exercise cards.

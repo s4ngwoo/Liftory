@@ -713,12 +713,17 @@ fun WorkoutSessionDetailScreen(
         AlertDialog(
             onDismissRequest = { showFinishWorkoutDialog = false },
             icon = { Icon(Icons.Default.Celebration, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("오늘의 운동 완료!", fontWeight = FontWeight.Bold) },
+            title = { Text("운동을 마칠까요?", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("총 운동 시간: $elapsedFormatted")
-                    Text("완료한 세트: 총 ${sets.size}세트")
-                    Text("오늘도 목표를 달성하셨습니다. 세션을 저장하고 마무리하시겠습니까?")
+                    Text("⏱️ 총 운동 시간: $elapsedFormatted")
+                    Text("📊 기록된 세트: 총 ${sets.size}세트")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "모든 세트 기록이 안전하게 저장되며,\n통계 대시보드에 즉시 반영됩니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             confirmButton = {
@@ -731,12 +736,12 @@ fun WorkoutSessionDetailScreen(
                         onBack()
                     }
                 ) {
-                    Text("세션 완료 및 저장")
+                    Text("운동 마치기")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFinishWorkoutDialog = false }) {
-                    Text("운동 계속하기")
+                    Text("계속 운동하기")
                 }
             }
         )

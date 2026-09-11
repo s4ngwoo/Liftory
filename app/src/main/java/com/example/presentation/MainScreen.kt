@@ -11,9 +11,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -76,8 +78,8 @@ fun MainScreen(
                             launchSingleTop = true
                         }
                     },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Sessions") },
-                    label = { Text("Sessions") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "운동 세션") },
+                    label = { Text("운동") }
                 )
                 NavigationBarItem(
                     selected = currentRoute == "routines",
@@ -87,8 +89,8 @@ fun MainScreen(
                             launchSingleTop = true
                         }
                     },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Routines") },
-                    label = { Text("Routines") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "루틴") },
+                    label = { Text("루틴") }
                 )
                 NavigationBarItem(
                     selected = currentRoute == "exercises",
@@ -98,8 +100,8 @@ fun MainScreen(
                             launchSingleTop = true
                         }
                     },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Exercises") },
-                    label = { Text("Exercises") }
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "종목 도감") },
+                    label = { Text("종목 도감") }
                 )
                 NavigationBarItem(
                     selected = currentRoute == "stats",
@@ -109,8 +111,8 @@ fun MainScreen(
                             launchSingleTop = true
                         }
                     },
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
-                    label = { Text("Stats") }
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = "통계") },
+                    label = { Text("통계") }
                 )
             }
         }

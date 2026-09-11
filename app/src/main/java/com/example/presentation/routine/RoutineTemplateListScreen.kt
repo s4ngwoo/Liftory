@@ -56,7 +56,7 @@ fun RoutineTemplateListScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("루틴 라이브러리 (Routines)", fontWeight = FontWeight.Bold)
+                        Text("루틴 라이브러리", fontWeight = FontWeight.Bold)
                         Text(
                             "자주 하는 운동 루틴을 선택하여 즉시 세션을 시작하세요",
                             style = MaterialTheme.typography.bodySmall,
@@ -398,8 +398,11 @@ fun RoutineTemplateCard(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 Spacer(modifier = Modifier.height(10.dp))
 
+                val displayExercises = template.exercises.take(3)
+                val remainingCount = template.exercises.size - displayExercises.size
+
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    template.exercises.forEach { preset ->
+                    displayExercises.forEach { preset ->
                         val exercise = exercises.find { it.id == preset.exerciseId }
                         val exName = exercise?.name ?: preset.exerciseId
                         val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
@@ -459,6 +462,15 @@ fun RoutineTemplateCard(
                             )
                         }
                     }
+
+                    if (remainingCount > 0) {
+                        Text(
+                            text = "외 ${remainingCount}개 종목 더보기...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(start = 12.dp, top = 2.dp)
+                        )
+                    }
                 }
             }
 
@@ -478,7 +490,7 @@ fun RoutineTemplateCard(
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("이 루틴으로 세션 시작 (Start)", fontWeight = FontWeight.Bold)
+                Text("이 루틴으로 시작", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -581,6 +593,9 @@ fun RoutineEditorDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+                                val isCardio = exercise?.isCardio == true
+                                val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -601,8 +616,6 @@ fun RoutineEditorDialog(
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        val isCardio = exercise?.isCardio == true
-                                        val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
                                         val badgeColor = when {
                                             isCardio -> MaterialTheme.colorScheme.primaryContainer
                                             isMachine -> MaterialTheme.colorScheme.tertiaryContainer
@@ -631,18 +644,56 @@ fun RoutineEditorDialog(
                                         }
                                     }
 
-                                    IconButton(
-                                        onClick = {
-                                            presets = presets.filterIndexed { i, _ -> i != index }
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Remove",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (index > 0) {
+                                            IconButton(
+                                                onClick = {
+                                                    val mutable = presets.toMutableList()
+                                                    val temp = mutable[index]
+                                                    mutable[index] = mutable[index - 1]
+                                                    mutable[index - 1] = temp
+                                                    presets = mutable
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.ArrowUpward,
+                                                    contentDescription = "위로 이동",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        if (index < presets.size - 1) {
+                                            IconButton(
+                                                onClick = {
+                                                    val mutable = presets.toMutableList()
+                                                    val temp = mutable[index]
+                                                    mutable[index] = mutable[index + 1]
+                                                    mutable[index + 1] = temp
+                                                    presets = mutable
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.ArrowDownward,
+                                                    contentDescription = "아래로 이동",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                presets = presets.filterIndexed { i, _ -> i != index }
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "삭제",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
 
@@ -669,7 +720,7 @@ fun RoutineEditorDialog(
                                                 if (i == index) p.copy(defaultWeight = w) else p
                                             }
                                         },
-                                        label = { Text("목표 무게(kg)") },
+                                        label = { Text(if (isCardio) "목표 속도/레벨" else "목표 무게(kg)") },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         singleLine = true,
                                         modifier = Modifier.weight(1f)
@@ -684,7 +735,7 @@ fun RoutineEditorDialog(
                                                 if (i == index) p.copy(defaultReps = r) else p
                                             }
                                         },
-                                        label = { Text("목표 횟수(회)") },
+                                        label = { Text(if (isCardio) "목표 시간(분)" else "목표 횟수(회)") },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         singleLine = true,
                                         modifier = Modifier.weight(1f)

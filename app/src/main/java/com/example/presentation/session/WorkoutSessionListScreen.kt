@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -49,7 +50,7 @@ fun WorkoutSessionListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("운동 세션 기록 (Sessions)", fontWeight = FontWeight.Bold) },
+                title = { Text("운동 세션 기록", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -63,7 +64,8 @@ fun WorkoutSessionListScreen(
                         if (activeSession != null) {
                             sessionConflictToPrompt = activeSession
                         } else {
-                            viewModel.createNewSession("Workout Session") { sessionId ->
+                            val defaultTitle = SimpleDateFormat("M월 d일 운동", Locale.KOREA).format(Date())
+                            viewModel.createNewSession(defaultTitle) { sessionId ->
                                 onNavigateToDetail(sessionId)
                             }
                         }
@@ -117,7 +119,8 @@ fun WorkoutSessionListScreen(
                                     if (activeSession != null) {
                                         sessionConflictToPrompt = activeSession
                                     } else {
-                                        viewModel.createNewSession("Workout Session") { sessionId ->
+                                        val defaultTitle = SimpleDateFormat("M월 d일 운동", Locale.KOREA).format(Date())
+                                        viewModel.createNewSession(defaultTitle) { sessionId ->
                                             onNavigateToDetail(sessionId)
                                         }
                                     }
@@ -192,7 +195,8 @@ fun WorkoutSessionListScreen(
                     FilledTonalButton(
                         onClick = {
                             sessionConflictToPrompt = null
-                            viewModel.createNewSession("Workout Session", finishExistingActive = true) { newId ->
+                            val defaultTitle = SimpleDateFormat("M월 d일 운동", Locale.KOREA).format(Date())
+                            viewModel.createNewSession(defaultTitle, finishExistingActive = true) { newId ->
                                 onNavigateToDetail(newId)
                             }
                         }
@@ -277,20 +281,22 @@ fun BentoSessionCard(
     onDelete: () -> Unit
 ) {
     val isActive = session.endTime == null
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
-    val dateStr = dateFormat.format(Date(session.startTime))
+    val dateDayFormat = SimpleDateFormat("M월 d일 (E)", Locale.KOREA)
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.KOREA)
+    val dateDayStr = dateDayFormat.format(Date(session.startTime))
+    val startTimeStr = timeFormat.format(Date(session.startTime))
     var showMenu by remember { mutableStateOf(false) }
 
-    val sessionTitle = remember(session.notes) {
+    val sessionTitle = remember(session.notes, session.startTime) {
         val parsed = SessionNotesManager.getSessionTitle(session.notes)
-        if (parsed.isNotBlank()) parsed else "Workout Session"
+        if (parsed.isNotBlank()) parsed else SimpleDateFormat("M월 d일 운동", Locale.KOREA).format(Date(session.startTime))
     }
 
     val subtitle = if (isActive) {
-        "🔥 운동 진행 중 • $dateStr"
+        "🔥 운동 진행 중 · 시작 $startTimeStr"
     } else {
         val durationMin = ((session.endTime!! - session.startTime).coerceAtLeast(0L) / 60000L).toInt()
-        "$dateStr • ${durationMin}분 완료"
+        "$dateDayStr · 시작 $startTimeStr · ${durationMin}분 완료"
     }
 
     Card(
@@ -324,11 +330,20 @@ fun BentoSessionCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (isActive) "🔥" else dateStr.take(3),
-                    fontWeight = FontWeight.Bold,
-                    color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                if (isActive) {
+                    Text(
+                        text = "🔥",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "완료됨",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
