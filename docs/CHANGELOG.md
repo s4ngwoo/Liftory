@@ -11,6 +11,9 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
+- Statistics Dashboard Bento Hierarchy & Period Filtering: Reorganized statistics into an intuitive 4-zone layout featuring top period filter chips (Last 7 Days, Last 30 Days, Last 3 Months, All Time) and a 3-column Bento KPI grid (Total Volume, Cardio Minutes, Workout Days), followed by period volume charts and PR badges.
+- Safe Backup Restoration & JSON Pre-validation: Relocated destructive backup and restore controls to an isolated bottom card (Zone 4) and implemented real-time JSON validation with detailed entity counts ("✅ 확인됨: 세션 N개 · 세트 M개 포함") before executing data restoration.
+
 - Navigation & Terminology Standardization: Differentiated bottom navigation bar icons with clear Korean labels ("운동", "루틴", "종목 도감", "통계"), replacing duplicate dumbbell icons and English tags.
 - Date/Time & Default Title Localization: Formatted session dates to Korean standard ("M월 d일 (E) · 시작 HH:mm · N분 완료"), generated user-friendly default session titles ("M월 d일 운동"), and replaced arbitrary text truncation with dedicated completion status check icons.
 - Routine Library & Editor Enhancements: Compacted routine preview lists to 3 items with an "외 N개" summary, streamlined CTA to "이 루틴으로 시작", and added exercise reordering arrows (up/down) and smart cardio target labels in the routine editor modal.
