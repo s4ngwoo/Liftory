@@ -36,7 +36,6 @@ fun WorkoutSessionDetailScreen(
     viewModel: WorkoutSessionViewModel,
     onBack: () -> Unit,
     restTimerManager: RestTimerManager = remember { RestTimerManager() },
-    onEnterPip: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
@@ -113,11 +112,6 @@ fun WorkoutSessionDetailScreen(
                     }
                 },
                 actions = {
-                    if (onEnterPip != null) {
-                        IconButton(onClick = onEnterPip) {
-                            Icon(Icons.Default.PictureInPictureAlt, contentDescription = "플로팅 팝업 모드")
-                        }
-                    }
                     FilledTonalButton(
                         onClick = { showFinishWorkoutDialog = true },
                         colors = ButtonDefaults.filledTonalButtonColors(
