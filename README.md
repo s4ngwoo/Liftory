@@ -18,10 +18,13 @@
 
 ## Features
 
-- **Workout Logging**: Track exercises, sets, reps, weights, RPE, and notes.
-- **Analytics & History**: Track 1RM progression, volume per muscle group, and consistency heatmaps.
-- **Routine Management**: Create and follow custom workout splits and templates.
-- **Cloud Backup & Sync**: Optional sync with Firebase/Firestore.
+- **Workout Logging & Unified Session HUD**: Real-time elapsed workout timer, interactive rest stopwatch/countdown (+30s, pause/resume, chips), per-exercise feedback notes, and estimated 1RM calculation.
+- **Global Background & PiP Timer**: 3-tiered persistent timing system — in-app top navigation banner, Android status bar chronometer notification via Foreground Service (zero CPU wake lock, battery-friendly), and Picture-in-Picture (PiP) 16:9 floating HUD popup with auto-enter on swipe to home.
+- **Smart Set Input & History Reference**: Compact horizontal 3-column input row with zero-keyboard-occlusion, previous set copy (`[↺ 이전 세트 복사]`), and one-touch past workout history copy (`[지난 세션 복사]`).
+- **Routine Management & Customization**: Create, edit, and reorder routines with exercise presets, live last-used dates, and instant session start.
+- **Equipment Categorization**: Free Weight vs. Machine classification with popular gym machine brand selection (Hammer Strength, Cybex, Life Fitness, Newtech, etc.).
+- **Analytics & History**: Track 1RM progression, volume per muscle group, and JSON/CSV backup data export/import.
+- **Cloud Backup & Sync**: Optional offline-first sync with Firebase / Firestore.
 
 ---
 
