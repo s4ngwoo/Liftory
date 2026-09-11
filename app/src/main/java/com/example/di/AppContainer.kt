@@ -68,6 +68,7 @@ interface AppContainer {
     val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase
     val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase
     val deleteRoutineTemplateUseCase: com.example.application.usecase.routine.DeleteRoutineTemplateUseCase
+    val updateRoutineTemplateUseCase: com.example.application.usecase.routine.UpdateRoutineTemplateUseCase
     
     val statisticsRepository: com.example.domain.repository.StatisticsRepository
     val dataExporter: com.example.domain.repository.DataExporter
@@ -77,6 +78,7 @@ interface AppContainer {
     val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase
     val importWorkoutDataUseCase: com.example.application.usecase.statistics.ImportWorkoutDataUseCase
     val calculateOneRepMaxUseCase: com.example.application.usecase.statistics.CalculateOneRepMaxUseCase
+    val getLastExerciseHistoryUseCase: com.example.application.usecase.set.GetLastExerciseHistoryUseCase
 
     val restTimerManager: RestTimerManager
 }
@@ -199,6 +201,9 @@ class DefaultAppContainer(
     override val deleteRoutineTemplateUseCase: com.example.application.usecase.routine.DeleteRoutineTemplateUseCase by lazy {
         com.example.application.usecase.routine.DeleteRoutineTemplateUseCase(routineTemplateRepository)
     }
+    override val updateRoutineTemplateUseCase: com.example.application.usecase.routine.UpdateRoutineTemplateUseCase by lazy {
+        com.example.application.usecase.routine.UpdateRoutineTemplateUseCase(routineTemplateRepository)
+    }
 
     override val statisticsRepository: com.example.domain.repository.StatisticsRepository by lazy {
         com.example.infrastructure.repository.StatisticsRepositoryImpl(database.exerciseSetDao(), ioDispatcher)
@@ -223,6 +228,9 @@ class DefaultAppContainer(
     }
     override val calculateOneRepMaxUseCase: com.example.application.usecase.statistics.CalculateOneRepMaxUseCase by lazy {
         com.example.application.usecase.statistics.CalculateOneRepMaxUseCase()
+    }
+    override val getLastExerciseHistoryUseCase: com.example.application.usecase.set.GetLastExerciseHistoryUseCase by lazy {
+        com.example.application.usecase.set.GetLastExerciseHistoryUseCase(exerciseSetRepository)
     }
 
     override val restTimerManager: RestTimerManager by lazy {

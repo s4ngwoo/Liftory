@@ -47,9 +47,14 @@ class ExerciseViewModel(
         }
     }
 
-    fun createCustomExercise(name: String, muscleGroup: String) {
+    fun createCustomExercise(
+        name: String,
+        muscleGroup: String,
+        equipmentType: com.example.domain.model.EquipmentType = com.example.domain.model.EquipmentType.FREE_WEIGHT,
+        machineBrand: String? = null
+    ) {
         viewModelScope.launch {
-            createExerciseUseCase(name, muscleGroup)
+            createExerciseUseCase(name, muscleGroup, equipmentType, machineBrand)
             // observeAll will automatically update the list
         }
     }

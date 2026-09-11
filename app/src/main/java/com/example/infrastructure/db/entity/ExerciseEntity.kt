@@ -8,7 +8,8 @@ import androidx.room.PrimaryKey
     tableName = "exercises",
     indices = [
         Index(value = ["name"]),
-        Index(value = ["muscleGroup"])
+        Index(value = ["muscleGroup"]),
+        Index(value = ["equipmentType"])
     ]
 )
 data class ExerciseEntity(
@@ -17,6 +18,8 @@ data class ExerciseEntity(
     val name: String,
     val isCustom: Boolean,
     val muscleGroup: String,
+    val equipmentType: String = "FREE_WEIGHT",
+    val machineBrand: String? = null,
     val createdAt: Long,
     val updatedAt: Long
 )

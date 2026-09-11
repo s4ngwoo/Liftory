@@ -26,6 +26,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.application.usecase.statistics.CalculateOneRepMaxUseCase
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +40,11 @@ fun ExerciseSetEditorSheet(
     lastSetSummary: String? = null,
     lastWeight: Double? = null,
     lastReps: Int? = null,
-    lastRpe: Double? = null
+    lastRpe: Double? = null,
+    lastSessionDate: Long? = null,
+    lastSessionWeight: Double? = null,
+    lastSessionReps: Int? = null,
+    lastSessionRpe: Double? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -56,6 +63,10 @@ fun ExerciseSetEditorSheet(
             lastWeight = lastWeight,
             lastReps = lastReps,
             lastRpe = lastRpe,
+            lastSessionDate = lastSessionDate,
+            lastSessionWeight = lastSessionWeight,
+            lastSessionReps = lastSessionReps,
+            lastSessionRpe = lastSessionRpe,
             onClose = onDismissRequest
         )
     }
@@ -70,6 +81,10 @@ fun ExerciseSetEditorContent(
     lastWeight: Double? = null,
     lastReps: Int? = null,
     lastRpe: Double? = null,
+    lastSessionDate: Long? = null,
+    lastSessionWeight: Double? = null,
+    lastSessionReps: Int? = null,
+    lastSessionRpe: Double? = null,
     onClose: (() -> Unit)? = null
 ) {
     var weightInput by remember { mutableStateOf("") }
@@ -89,9 +104,12 @@ fun ExerciseSetEditorContent(
         onSaveSet(weight, reps, rpe)
     }
 
-    val ghostWeight = lastWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "0.0"
-    val ghostReps = lastReps?.toString() ?: "0"
-    val ghostRpe = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "8.0"
+    val ghostWeight = lastWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" }
+        ?: lastSessionWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "0.0"
+    val ghostReps = lastReps?.toString()
+        ?: lastSessionReps?.toString() ?: "0"
+    val ghostRpe = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" }
+        ?: lastSessionRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "8.0"
 
     // Calculate live 1RM estimate
     val liveWeight = weightInput.toDoubleOrNull() ?: 0.0
@@ -158,7 +176,60 @@ fun ExerciseSetEditorContent(
             }
         }
 
-        // Previous Set Reference Banner (with 1-touch copy button)
+        // Last Workout Session Reference Banner (Historical reference)
+        if (lastSessionWeight != null && lastSessionReps != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            val dateLabel = if (lastSessionDate != null) {
+                SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(Date(lastSessionDate))
+            } else "이전 세션"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "📅 지난 운동 ($dateLabel $setNumber" + "세트):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "${lastSessionWeight}kg × ${lastSessionReps}회" + if (lastSessionRpe != null) " (RPE $lastSessionRpe)" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+
+                AssistChip(
+                    onClick = {
+                        weightInput = if (lastSessionWeight % 1.0 == 0.0) "${lastSessionWeight.toInt()}" else "$lastSessionWeight"
+                        repsInput = "$lastSessionReps"
+                        rpeInput = lastSessionRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: ""
+                    },
+                    label = { Text("지난 세션 복사", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        labelColor = MaterialTheme.colorScheme.onTertiary
+                    ),
+                    modifier = Modifier.height(30.dp)
+                )
+            }
+        }
+
+        // Previous Set in Current Session Reference Banner (with 1-touch copy button)
         if (lastSetSummary != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -175,7 +246,7 @@ fun ExerciseSetEditorContent(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "이전 세트: ",
+                        text = "오늘 직전 세트: ",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -195,7 +266,7 @@ fun ExerciseSetEditorContent(
                             repsInput = "$lastReps"
                             rpeInput = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: ""
                         },
-                        label = { Text("이전 세트 복사", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) },
+                        label = { Text("직전 세트 복사", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,

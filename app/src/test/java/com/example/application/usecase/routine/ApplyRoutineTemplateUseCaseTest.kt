@@ -85,6 +85,17 @@ class FakeRoutineTemplateRepository : RoutineTemplateRepository {
         templates.add(template)
         return Result.success(template)
     }
-    override suspend fun update(template: RoutineTemplate): Result<Unit> = Result.success(Unit)
-    override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
+    override suspend fun update(template: RoutineTemplate): Result<Unit> {
+        val index = templates.indexOfFirst { it.id == template.id }
+        return if (index != -1) {
+            templates[index] = template
+            Result.success(Unit)
+        } else {
+            Result.failure(NoSuchElementException("Template not found"))
+        }
+    }
+    override suspend fun delete(id: String): Result<Unit> {
+        templates.removeAll { it.id == id }
+        return Result.success(Unit)
+    }
 }

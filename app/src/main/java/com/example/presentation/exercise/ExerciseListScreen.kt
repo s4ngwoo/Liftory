@@ -1,19 +1,24 @@
 package com.example.presentation.exercise
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.domain.model.EquipmentType
 import com.example.domain.model.Exercise
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,11 +31,12 @@ fun ExerciseListScreen(
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
+    var selectedEquipmentFilter by remember { mutableStateOf<EquipmentType?>(null) } // null = All
     var showAddDialog by remember { mutableStateOf(false) }
     var viewingExercise by remember { mutableStateOf<Exercise?>(null) }
 
     val categories = listOf(
-        "All" to "전체",
+        "All" to "전체 부위",
         "Chest" to "가슴",
         "Back" to "등",
         "Legs" to "하체",
@@ -38,11 +44,12 @@ fun ExerciseListScreen(
         "Arms" to "팔"
     )
 
-    val filteredExercises = remember(exercises, searchQuery, selectedCategory) {
+    val filteredExercises = remember(exercises, searchQuery, selectedCategory, selectedEquipmentFilter) {
         exercises.filter { exercise ->
             val matchesCategory = selectedCategory == "All" || exercise.muscleGroup.equals(selectedCategory, ignoreCase = true)
             val matchesSearch = searchQuery.isBlank() || exercise.name.contains(searchQuery, ignoreCase = true)
-            matchesCategory && matchesSearch
+            val matchesEquipment = selectedEquipmentFilter == null || exercise.equipmentType == selectedEquipmentFilter
+            matchesCategory && matchesSearch && matchesEquipment
         }
     }
 
@@ -54,7 +61,11 @@ fun ExerciseListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Custom Exercise")
             }
         }
@@ -73,14 +84,41 @@ fun ExerciseListScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("운동 종목 검색...") },
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                placeholder = { Text("운동 종목 또는 브랜드 검색...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true
             )
 
-            // Category filter chips
-            androidx.compose.foundation.lazy.LazyRow(
+            // Equipment Type Tabs (Free Weight vs Machine)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedEquipmentFilter == null,
+                    onClick = { selectedEquipmentFilter = null },
+                    label = { Text("전체 기구") },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = selectedEquipmentFilter == EquipmentType.FREE_WEIGHT,
+                    onClick = { selectedEquipmentFilter = EquipmentType.FREE_WEIGHT },
+                    label = { Text("🏋️ 프리웨이트") },
+                    modifier = Modifier.weight(1.3f)
+                )
+                FilterChip(
+                    selected = selectedEquipmentFilter == EquipmentType.MACHINE,
+                    onClick = { selectedEquipmentFilter = EquipmentType.MACHINE },
+                    label = { Text("⚙️ 머신운동") },
+                    modifier = Modifier.weight(1.2f)
+                )
+            }
+
+            // Category filter chips (Body Parts)
+            LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -109,7 +147,7 @@ fun ExerciseListScreen(
                                 .fillMaxWidth()
                                 .padding(top = 16.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -124,7 +162,7 @@ fun ExerciseListScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "새로운 커스텀 운동을 추가하거나 검색어를 변경해보세요.",
+                                    "새로운 커스텀 프리웨이트 또는 머신 종목을 등록해보세요.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -158,8 +196,8 @@ fun ExerciseListScreen(
     if (showAddDialog) {
         AddExerciseDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, group ->
-                viewModel.createCustomExercise(name, group)
+            onConfirm = { name, group, equipType, brand ->
+                viewModel.createCustomExercise(name, group, equipType, brand)
                 showAddDialog = false
             }
         )
@@ -172,7 +210,13 @@ fun ExerciseListScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("타겟 부위: ${exercise.muscleGroup}", style = MaterialTheme.typography.bodyMedium)
-                    Text("유형: ${if (exercise.isCustom) "사용자 지정 운동" else "기본 제공 운동"}", style = MaterialTheme.typography.bodyMedium)
+                    val typeStr = if (exercise.equipmentType == EquipmentType.MACHINE) {
+                        "⚙️ 머신운동" + if (!exercise.machineBrand.isNullOrBlank()) " (${exercise.machineBrand})" else ""
+                    } else {
+                        "🏋️ 프리웨이트"
+                    }
+                    Text("운동 유형: $typeStr", style = MaterialTheme.typography.bodyMedium)
+                    Text("등록 유형: ${if (exercise.isCustom) "사용자 정의 종목" else "기본 제공 종목"}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "세션 화면에서 '+' 버튼을 눌러 이 운동의 무게와 횟수를 기록할 수 있습니다.",
@@ -193,8 +237,11 @@ fun ExerciseListScreen(
 @Composable
 fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(
             modifier = Modifier
@@ -203,13 +250,40 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(exercise.name, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = exercise.muscleGroup,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = exercise.name,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = exercise.muscleGroup,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    if (exercise.equipmentType == EquipmentType.MACHINE) {
+                        val brandLabel = if (!exercise.machineBrand.isNullOrBlank()) "머신 (${exercise.machineBrand})" else "머신"
+                        Text(
+                            text = brandLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else {
+                        Text(
+                            text = "프리웨이트",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
             if (exercise.isCustom) {
                 Badge(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
@@ -224,10 +298,13 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
 @Composable
 fun AddExerciseDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, muscleGroup: String) -> Unit
+    onConfirm: (name: String, muscleGroup: String, equipmentType: EquipmentType, machineBrand: String?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var selectedGroup by remember { mutableStateOf("Chest") }
+    var selectedEquipment by remember { mutableStateOf(EquipmentType.FREE_WEIGHT) }
+    var machineBrand by remember { mutableStateOf("") }
+
     val muscleGroups = listOf(
         "Chest" to "가슴",
         "Back" to "등",
@@ -237,20 +314,65 @@ fun AddExerciseDialog(
         "Core" to "복근"
     )
 
+    val popularBrands = listOf("Hammer Strength", "Cybex", "Life Fitness", "Newtech", "Arsenal", "Panatta")
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("새 운동 종목 추가") },
+        title = { Text("새 운동 종목 추가", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("운동 이름 (예: 인클라인 벤치프레스)") },
+                    label = { Text("운동 이름 (예: 체스트 프레스)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("타겟 부위 선택:", style = MaterialTheme.typography.labelMedium)
-                androidx.compose.foundation.lazy.LazyRow(
+
+                // Equipment Type Selection (Free Weight vs Machine)
+                Text("기구 구분:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedEquipment == EquipmentType.FREE_WEIGHT,
+                        onClick = { selectedEquipment = EquipmentType.FREE_WEIGHT },
+                        label = { Text("🏋️ 프리웨이트") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = selectedEquipment == EquipmentType.MACHINE,
+                        onClick = { selectedEquipment = EquipmentType.MACHINE },
+                        label = { Text("⚙️ 머신운동") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // If Machine is selected, show Machine Brand input & suggestions
+                if (selectedEquipment == EquipmentType.MACHINE) {
+                    OutlinedTextField(
+                        value = machineBrand,
+                        onValueChange = { machineBrand = it },
+                        label = { Text("머신 브랜드 / 제조사 (선택)") },
+                        placeholder = { Text("예: Hammer Strength") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(popularBrands) { brand ->
+                            SuggestionChip(
+                                onClick = { machineBrand = brand },
+                                label = { Text(brand, style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+                    }
+                }
+
+                Text("타겟 부위 선택:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(muscleGroups.size) { index ->
@@ -266,7 +388,14 @@ fun AddExerciseDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name, selectedGroup) },
+                onClick = { 
+                    onConfirm(
+                        name,
+                        selectedGroup,
+                        selectedEquipment,
+                        if (selectedEquipment == EquipmentType.MACHINE) machineBrand.trim().ifBlank { null } else null
+                    ) 
+                },
                 enabled = name.isNotBlank()
             ) {
                 Text("추가하기")

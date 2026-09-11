@@ -14,6 +14,10 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 ### Added
 - Standardized documentation system (`docs/` and `notes/`).
 - Android Clean Architecture scaffold with Jetpack Compose.
+- Routine template editing: edit routine title, add/remove exercises, adjust target weight/reps presets, with search & equipment-filter exercise library picker (`UpdateRoutineTemplateUseCase`).
+- Last workout history reference: view past session date and exact sets per exercise, with one-touch copy (`[지난 세션 복사]`) in set editor bottom sheet (`GetLastExerciseHistoryUseCase`).
+- Exercise equipment categorization: Free Weight vs Machine (`EquipmentType`) division with machine brand selection (Hammer Strength, Cybex, Life Fitness, Newtech, etc.) and equipment filter chips.
+- Database migration: Room schema v2 migration (`MIGRATION_1_2`) safely adding equipment type and machine brand columns with indices.
 - Workout session edit (name/notes) and deletion with confirmation dialog and CASCADE set cleanup.
 - Routine template interactive card with exercise preview list, one-tap workout start, and routine deletion.
 - Real-time cumulative workout elapsed timer and finish workout completion dialog.

@@ -82,4 +82,32 @@ class ExerciseSetRepositoryImpl(
             list.map { it.toDomain() }
         }
     }
+
+    override suspend fun getLastHistoryForExercise(
+        exerciseId: String,
+        currentSessionId: String?
+    ): com.example.domain.model.ExerciseHistoryRecord? = withContext(ioDispatcher) {
+        val tuples = setDao.getPastSetsForExercise(exerciseId, currentSessionId)
+        if (tuples.isEmpty()) return@withContext null
+
+        val firstSessionId = tuples.first().sessionId
+        val sessionDate = tuples.first().sessionDate
+        val sessionSets = tuples.filter { it.sessionId == firstSessionId }
+            .sortedBy { it.orderIndex }
+            .mapIndexed { index, tuple ->
+                com.example.domain.model.ExerciseSetSummary(
+                    setNumber = index + 1,
+                    weight = tuple.weight,
+                    reps = tuple.reps,
+                    rpe = tuple.rpe
+                )
+            }
+
+        com.example.domain.model.ExerciseHistoryRecord(
+            exerciseId = exerciseId,
+            sessionId = firstSessionId,
+            sessionDate = sessionDate,
+            sets = sessionSets
+        )
+    }
 }

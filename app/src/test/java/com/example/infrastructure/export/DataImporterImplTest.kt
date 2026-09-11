@@ -62,6 +62,7 @@ class FakeExerciseSetDao : ExerciseSetDao {
 
     override fun observeVolumeByPeriod(startDate: Long, endDate: Long): Flow<List<SessionVolumeTuple>> = flowOf(emptyList())
     override fun observePersonalRecords(): Flow<List<PersonalRecordTuple>> = flowOf(emptyList())
+    override suspend fun getPastSetsForExercise(exerciseId: String, currentSessionId: String?): List<com.example.infrastructure.db.entity.PastSetTuple> = emptyList()
 }
 
 class DataImporterImplTest {

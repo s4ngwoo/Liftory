@@ -24,7 +24,7 @@ class FakeSessionRepository : WorkoutSessionRepository {
     override fun observeAll(): Flow<List<WorkoutSession>> = flowOf(emptyList())
 }
 
-class FakeSetRepository : ExerciseSetRepository {
+open class FakeSetRepository : ExerciseSetRepository {
     val createdSets = mutableListOf<ExerciseSet>()
     var createdSet: ExerciseSet? = null
 
@@ -36,6 +36,10 @@ class FakeSetRepository : ExerciseSetRepository {
     override suspend fun update(set: ExerciseSet): Result<Unit> = Result.success(Unit)
     override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
     override fun observeBySession(sessionId: String): Flow<List<ExerciseSet>> = flowOf(emptyList())
+    override suspend fun getLastHistoryForExercise(
+        exerciseId: String,
+        currentSessionId: String?
+    ): com.example.domain.model.ExerciseHistoryRecord? = null
 }
 
 class FakeTransactionProvider : TransactionProvider {

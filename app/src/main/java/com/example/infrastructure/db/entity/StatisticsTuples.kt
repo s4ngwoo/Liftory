@@ -10,3 +10,14 @@ data class PersonalRecordTuple(
     val maxWeight: Double,
     val achievedAt: Long
 )
+
+data class PastSetTuple(
+    val sessionDate: Long,
+    val sessionId: String,
+    val id: String,
+    val exerciseId: String,
+    val weight: Double,
+    val reps: Int,
+    val rpe: Double?,
+    val orderIndex: Int
+)

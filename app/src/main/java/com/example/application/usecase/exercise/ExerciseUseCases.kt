@@ -18,13 +18,17 @@ class CreateExerciseUseCase(
 ) {
     suspend operator fun invoke(
         name: String,
-        muscleGroup: String = "All"
+        muscleGroup: String = "All",
+        equipmentType: com.example.domain.model.EquipmentType = com.example.domain.model.EquipmentType.FREE_WEIGHT,
+        machineBrand: String? = null
     ): Result<Exercise> {
         val exercise = Exercise(
             id = UUID.randomUUID().toString(),
             name = name,
             isCustom = true,
-            muscleGroup = muscleGroup
+            muscleGroup = muscleGroup,
+            equipmentType = equipmentType,
+            machineBrand = machineBrand
         )
         return exerciseRepository.create(exercise)
     }

@@ -84,4 +84,70 @@ class RoutineTemplateViewModelTest {
         advanceUntilIdle()
         org.junit.Assert.assertNotNull(createdSessionId)
     }
+
+    @Test
+    fun `updateTemplate should update template in repository`() = runTest {
+        val templateId = "tpl_edit"
+        repository.create(RoutineTemplate(id = templateId, name = "Old Name", exercises = emptyList()))
+        
+        val updateUseCase = com.example.application.usecase.routine.UpdateRoutineTemplateUseCase(repository)
+        val vm = RoutineTemplateViewModel(
+            observeRoutineTemplatesUseCase = ObserveRoutineTemplatesUseCase(repository),
+            createRoutineTemplateUseCase = CreateRoutineTemplateUseCase(repository),
+            updateRoutineTemplateUseCase = updateUseCase
+        )
+        advanceUntilIdle()
+
+        var successCalled = false
+        val newPresets = listOf(
+            com.example.domain.model.ExercisePreset(
+                exerciseId = "ex_1",
+                defaultWeight = 80.0,
+                defaultReps = 5,
+                orderIndex = 0
+            )
+        )
+        vm.updateTemplate(templateId, "Updated Routine", newPresets) {
+            successCalled = true
+        }
+        advanceUntilIdle()
+
+        org.junit.Assert.assertTrue(successCalled)
+        val updated = repository.getById(templateId)
+        org.junit.Assert.assertNotNull(updated)
+        assertEquals("Updated Routine", updated?.name)
+        assertEquals(1, updated?.exercises?.size)
+        assertEquals(80.0, updated?.exercises?.first()?.defaultWeight)
+    }
+
+    @Test
+    fun `routineLastWorkoutMap should map templateId to last session startTime`() = runTest {
+        val templateId = "tpl_leg"
+        repository.create(RoutineTemplate(id = templateId, name = "Leg Day", exercises = emptyList()))
+
+        val pastSession = com.example.domain.model.WorkoutSession(
+            id = "sess_1",
+            startTime = 1700000000000L,
+            notes = "Leg Day Workout"
+        )
+        val fakeObserveSessionsUseCase = com.example.application.usecase.session.ObserveWorkoutSessionsUseCase(
+            sessionRepository = object : com.example.domain.repository.WorkoutSessionRepository {
+                override suspend fun create(session: com.example.domain.model.WorkoutSession) = Result.success(session)
+                override suspend fun update(session: com.example.domain.model.WorkoutSession) = Result.success(Unit)
+                override suspend fun delete(id: String) = Result.success(Unit)
+                override suspend fun getById(id: String) = null
+                override fun observeAll() = kotlinx.coroutines.flow.flowOf(listOf(pastSession))
+            }
+        )
+
+        val vm = RoutineTemplateViewModel(
+            observeRoutineTemplatesUseCase = ObserveRoutineTemplatesUseCase(repository),
+            createRoutineTemplateUseCase = CreateRoutineTemplateUseCase(repository),
+            observeWorkoutSessionsUseCase = fakeObserveSessionsUseCase
+        )
+        advanceUntilIdle()
+
+        val lastWorkoutMap = vm.routineLastWorkoutMap.value
+        assertEquals(1700000000000L, lastWorkoutMap[templateId])
+    }
 }

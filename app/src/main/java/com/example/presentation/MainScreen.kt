@@ -98,7 +98,8 @@ fun MainScreen(
                                 appContainer.addExerciseSetUseCase,
                                 appContainer.updateWorkoutSessionUseCase,
                                 appContainer.deleteWorkoutSessionUseCase,
-                                appContainer.getWorkoutSessionUseCase
+                                appContainer.getWorkoutSessionUseCase,
+                                appContainer.getLastExerciseHistoryUseCase
                             ) as T
                         }
                     }
@@ -117,7 +118,9 @@ fun MainScreen(
                                 appContainer.createRoutineTemplateUseCase,
                                 appContainer.createWorkoutSessionUseCase,
                                 appContainer.applyRoutineTemplateUseCase,
-                                appContainer.deleteRoutineTemplateUseCase
+                                appContainer.deleteRoutineTemplateUseCase,
+                                appContainer.updateRoutineTemplateUseCase,
+                                appContainer.observeWorkoutSessionsUseCase
                             ) as T
                         }
                     }

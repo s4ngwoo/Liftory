@@ -88,4 +88,20 @@ class ExerciseUseCasesTest {
         assertTrue(searchResult.any { it.name == "Bench Press" })
         assertTrue(searchResult.any { it.name == "Incline Dumbbell Press" })
     }
+
+    @Test
+    fun `createExerciseUseCase should create machine exercise with equipmentType and machineBrand`() = runTest {
+        val result = createUseCase(
+            name = "Hammer Strength Chest Press",
+            muscleGroup = "Chest",
+            equipmentType = com.example.domain.model.EquipmentType.MACHINE,
+            machineBrand = "Hammer Strength"
+        )
+        assertTrue(result.isSuccess)
+
+        val created = result.getOrNull()!!
+        assertEquals("Hammer Strength Chest Press", created.name)
+        assertEquals(com.example.domain.model.EquipmentType.MACHINE, created.equipmentType)
+        assertEquals("Hammer Strength", created.machineBrand)
+    }
 }

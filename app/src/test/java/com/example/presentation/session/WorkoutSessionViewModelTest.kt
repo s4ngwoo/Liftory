@@ -126,4 +126,43 @@ class WorkoutSessionViewModelTest {
         assertNull(viewModel.selectedSessionId.value)
         assertEquals(true, callbackCalled)
     }
+
+    @Test
+    fun `loadHistoryForExercise should populate exerciseHistoryMap`() = runTest {
+        val exerciseId = "bench_press"
+        val expectedRecord = com.example.domain.model.ExerciseHistoryRecord(
+            exerciseId = exerciseId,
+            sessionId = "sess_old",
+            sessionDate = 1700000000000L,
+            sets = listOf(
+                com.example.domain.model.ExerciseSetSummary(setNumber = 1, weight = 100.0, reps = 5, rpe = 8.0)
+            )
+        )
+
+        val fakeSetRepo = object : FakeSetRepository() {
+            override suspend fun getLastHistoryForExercise(exerciseId: String, currentSessionId: String?): com.example.domain.model.ExerciseHistoryRecord? {
+                return if (exerciseId == "bench_press") expectedRecord else null
+            }
+        }
+        val historyUseCase = com.example.application.usecase.set.GetLastExerciseHistoryUseCase(fakeSetRepo)
+
+        val vm = WorkoutSessionViewModel(
+            observeSessionsUseCase,
+            observeExerciseSetsUseCase,
+            createSessionUseCase,
+            addExerciseSetUseCase,
+            updateWorkoutSessionUseCase,
+            deleteWorkoutSessionUseCase,
+            getWorkoutSessionUseCase,
+            getLastExerciseHistoryUseCase = historyUseCase
+        )
+
+        vm.loadHistoryForExercise(exerciseId)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val history = vm.exerciseHistoryMap.value[exerciseId]
+        org.junit.Assert.assertNotNull(history)
+        assertEquals("sess_old", history?.sessionId)
+        assertEquals(100.0, history?.sets?.first()?.weight ?: 0.0, 0.01)
+    }
 }

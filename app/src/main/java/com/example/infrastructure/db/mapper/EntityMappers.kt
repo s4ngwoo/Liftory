@@ -60,6 +60,8 @@ fun Exercise.toEntity(): ExerciseEntity = ExerciseEntity(
     name = name,
     isCustom = isCustom,
     muscleGroup = muscleGroup,
+    equipmentType = equipmentType.name,
+    machineBrand = machineBrand,
     createdAt = createdAt,
     updatedAt = updatedAt
 )
@@ -69,6 +71,12 @@ fun ExerciseEntity.toDomain(): Exercise = Exercise(
     name = name,
     isCustom = isCustom,
     muscleGroup = muscleGroup,
+    equipmentType = try {
+        com.example.domain.model.EquipmentType.valueOf(equipmentType)
+    } catch (_: Exception) {
+        com.example.domain.model.EquipmentType.FREE_WEIGHT
+    },
+    machineBrand = machineBrand,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

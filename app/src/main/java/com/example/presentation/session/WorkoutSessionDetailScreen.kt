@@ -19,10 +19,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.domain.model.ExerciseHistoryRecord
 import com.example.domain.model.ExerciseSet
 import com.example.domain.util.SessionNotesManager
 import com.example.presentation.timer.RestTimerManager
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +39,7 @@ fun WorkoutSessionDetailScreen(
 ) {
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
     val sets by viewModel.currentSessionSets.collectAsStateWithLifecycle()
+    val exerciseHistoryMap by viewModel.exerciseHistoryMap.collectAsStateWithLifecycle()
     val restTimerState by restTimerManager.timerState.collectAsStateWithLifecycle()
 
     var showEditorSheet by remember { mutableStateOf(false) }
@@ -359,6 +364,7 @@ fun WorkoutSessionDetailScreen(
                             exerciseName = exerciseName,
                             sets = exerciseSets,
                             comment = exerciseComment,
+                            lastHistory = exerciseHistoryMap[exerciseId],
                             onSaveComment = { newComment ->
                                 currentSession?.let { s ->
                                     val updatedNotes = SessionNotesManager.setExerciseComment(
@@ -381,6 +387,7 @@ fun WorkoutSessionDetailScreen(
             viewModel = exerciseViewModel,
             onExerciseSelected = { exercise ->
                 selectedExerciseId = exercise.id
+                viewModel.loadHistoryForExercise(exercise.id)
                 showExerciseSelection = false
                 showEditorSheet = true
             },
@@ -396,13 +403,21 @@ fun WorkoutSessionDetailScreen(
             "${lastSet.weight} kg × ${lastSet.reps}회" + if (lastSet.rpe != null) " (RPE ${lastSet.rpe})" else ""
         } else null
 
+        val currentSetNum = existingSets.size + 1
+        val historyRecord = selectedExerciseId?.let { exerciseHistoryMap[it] }
+        val lastSessionSet = historyRecord?.sets?.find { it.setNumber == currentSetNum } ?: historyRecord?.sets?.lastOrNull()
+
         ExerciseSetEditorSheet(
             exerciseName = exerciseName,
-            setNumber = existingSets.size + 1,
+            setNumber = currentSetNum,
             lastSetSummary = lastSummary,
             lastWeight = lastSet?.weight,
             lastReps = lastSet?.reps,
             lastRpe = lastSet?.rpe,
+            lastSessionDate = historyRecord?.sessionDate,
+            lastSessionWeight = lastSessionSet?.weight,
+            lastSessionReps = lastSessionSet?.reps,
+            lastSessionRpe = lastSessionSet?.rpe,
             onDismissRequest = { showEditorSheet = false },
             onSaveSet = { weight, reps, rpe ->
                 selectedExerciseId?.let { viewModel.addSet(it, weight, reps, rpe) }
@@ -521,6 +536,7 @@ fun ExerciseGroupCard(
     exerciseName: String,
     sets: List<ExerciseSet>,
     comment: String,
+    lastHistory: ExerciseHistoryRecord? = null,
     onSaveComment: (String) -> Unit
 ) {
     var isEditingComment by remember { mutableStateOf(false) }
@@ -556,7 +572,57 @@ fun ExerciseGroupCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Last Workout Session History Reference
+            if (lastHistory != null && lastHistory.sets.isNotEmpty()) {
+                val lastDateStr = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(Date(lastHistory.sessionDate))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "지난 수행 기록 ($lastDateStr)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            lastHistory.sets.forEach { prevSet ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                                ) {
+                                    Text(
+                                        text = "${prevSet.setNumber}세트 ${prevSet.weight}kg×${prevSet.reps}" + if (prevSet.rpe != null) " (RPE ${prevSet.rpe})" else "",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Set Header Row
             Row(

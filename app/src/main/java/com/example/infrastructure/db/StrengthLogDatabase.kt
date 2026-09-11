@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
         ExerciseEntity::class,
         PendingUploadEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class StrengthLogDatabase : RoomDatabase() {
@@ -39,6 +39,14 @@ abstract class StrengthLogDatabase : RoomDatabase() {
     companion object {
         private const val DATABASE_NAME = "strength_log.db"
 
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercises ADD COLUMN equipmentType TEXT NOT NULL DEFAULT 'FREE_WEIGHT'")
+                db.execSQL("ALTER TABLE exercises ADD COLUMN machineBrand TEXT DEFAULT NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_exercises_equipmentType ON exercises(equipmentType)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: StrengthLogDatabase? = null
 
@@ -49,6 +57,7 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                     StrengthLogDatabase::class.java,
                     DATABASE_NAME
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -73,18 +82,18 @@ abstract class StrengthLogDatabase : RoomDatabase() {
         suspend fun populateDefaultExercises(dao: ExerciseDao) {
             val now = System.currentTimeMillis()
             val defaults = listOf(
-                ExerciseEntity("ex_squat", "Squat (바벨 스쿼트)", false, "Legs", now, now),
-                ExerciseEntity("ex_bench", "Bench Press (바벨 벤치프레스)", false, "Chest", now, now),
-                ExerciseEntity("ex_deadlift", "Deadlift (데드리프트)", false, "Back", now, now),
-                ExerciseEntity("ex_ohp", "Overhead Press (밀리터리 프레스)", false, "Shoulders", now, now),
-                ExerciseEntity("ex_row", "Barbell Row (바벨 로우)", false, "Back", now, now),
-                ExerciseEntity("ex_pullup", "Pull Up (풀업)", false, "Back", now, now),
-                ExerciseEntity("ex_incline_bench", "Incline Dumbbell Press (인클라인 덤벨 프레스)", false, "Chest", now, now),
-                ExerciseEntity("ex_lat_pulldown", "Lat Pulldown (랫 풀다운)", false, "Back", now, now),
-                ExerciseEntity("ex_leg_press", "Leg Press (레그 프레스)", false, "Legs", now, now),
-                ExerciseEntity("ex_lateral_raise", "Lateral Raise (사이드 레터럴 레이즈)", false, "Shoulders", now, now),
-                ExerciseEntity("ex_bicep_curl", "Bicep Curl (덤벨 컬)", false, "Arms", now, now),
-                ExerciseEntity("ex_tricep_pushdown", "Tricep Pushdown (트라이셉 푸시다운)", false, "Arms", now, now)
+                ExerciseEntity("ex_squat", "Squat (바벨 스쿼트)", false, "Legs", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_bench", "Bench Press (바벨 벤치프레스)", false, "Chest", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_deadlift", "Deadlift (데드리프트)", false, "Back", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_ohp", "Overhead Press (밀리터리 프레스)", false, "Shoulders", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_row", "Barbell Row (바벨 로우)", false, "Back", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_pullup", "Pull Up (풀업)", false, "Back", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_incline_bench", "Incline Dumbbell Press (인클라인 덤벨 프레스)", false, "Chest", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_lat_pulldown", "Lat Pulldown (랫 풀다운)", false, "Back", "MACHINE", "Life Fitness", now, now),
+                ExerciseEntity("ex_leg_press", "Leg Press (레그 프레스)", false, "Legs", "MACHINE", "Hammer Strength", now, now),
+                ExerciseEntity("ex_lateral_raise", "Lateral Raise (사이드 레터럴 레이즈)", false, "Shoulders", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_bicep_curl", "Bicep Curl (덤벨 컬)", false, "Arms", "FREE_WEIGHT", null, now, now),
+                ExerciseEntity("ex_tricep_pushdown", "Tricep Pushdown (트라이셉 푸시다운)", false, "Arms", "MACHINE", "Cybex", now, now)
             )
             dao.insertAll(defaults)
         }

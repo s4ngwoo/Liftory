@@ -58,4 +58,13 @@ interface ExerciseSetDao {
         GROUP BY e.exerciseId
     """)
     fun observePersonalRecords(): Flow<List<PersonalRecordTuple>>
+
+    @Query("""
+        SELECT s.startTime as sessionDate, s.id as sessionId, e.id as id, e.exerciseId as exerciseId, e.weight as weight, e.reps as reps, e.rpe as rpe, e.orderIndex as orderIndex
+        FROM exercise_sets e
+        INNER JOIN workout_sessions s ON e.sessionId = s.id
+        WHERE e.exerciseId = :exerciseId AND (:currentSessionId IS NULL OR s.id != :currentSessionId)
+        ORDER BY s.startTime DESC, e.orderIndex ASC
+    """)
+    suspend fun getPastSetsForExercise(exerciseId: String, currentSessionId: String? = null): List<com.example.infrastructure.db.entity.PastSetTuple>
 }

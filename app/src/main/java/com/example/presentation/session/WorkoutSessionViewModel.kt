@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.example.application.usecase.set.GetLastExerciseHistoryUseCase
+import com.example.domain.model.ExerciseHistoryRecord
+
 class WorkoutSessionViewModel(
     private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
     private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase,
@@ -30,7 +33,8 @@ class WorkoutSessionViewModel(
     private val addExerciseSetUseCase: AddExerciseSetUseCase,
     private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
     private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
-    private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase
+    private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase,
+    private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null
 ) : ViewModel() {
 
     val sessionListUiState: StateFlow<List<WorkoutSession>> = observeSessionsUseCase()
@@ -63,6 +67,32 @@ class WorkoutSessionViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    private val _exerciseHistoryMap = MutableStateFlow<Map<String, ExerciseHistoryRecord>>(emptyMap())
+    val exerciseHistoryMap: StateFlow<Map<String, ExerciseHistoryRecord>> = _exerciseHistoryMap.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            currentSessionSets.collect { sets ->
+                val distinctExerciseIds = sets.map { it.exerciseId }.distinct()
+                distinctExerciseIds.forEach { exId ->
+                    if (!_exerciseHistoryMap.value.containsKey(exId)) {
+                        loadHistoryForExercise(exId)
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadHistoryForExercise(exerciseId: String) {
+        if (getLastExerciseHistoryUseCase == null) return
+        viewModelScope.launch {
+            val record = getLastExerciseHistoryUseCase(exerciseId, _selectedSessionId.value)
+            if (record != null) {
+                _exerciseHistoryMap.value = _exerciseHistoryMap.value + (exerciseId to record)
+            }
+        }
+    }
 
     fun createNewSession(notes: String, onCreated: ((String) -> Unit)? = null) {
         viewModelScope.launch {
@@ -126,7 +156,8 @@ class WorkoutSessionViewModel(
         private val addExerciseSetUseCase: AddExerciseSetUseCase,
         private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
         private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
-        private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase
+        private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase,
+        private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -137,7 +168,8 @@ class WorkoutSessionViewModel(
                 addExerciseSetUseCase,
                 updateWorkoutSessionUseCase,
                 deleteWorkoutSessionUseCase,
-                getWorkoutSessionUseCase
+                getWorkoutSessionUseCase,
+                getLastExerciseHistoryUseCase
             ) as T
         }
     }

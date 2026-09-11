@@ -51,7 +51,8 @@ fun AppNavigation(
                             appContainer.addExerciseSetUseCase,
                             appContainer.updateWorkoutSessionUseCase,
                             appContainer.deleteWorkoutSessionUseCase,
-                            appContainer.getWorkoutSessionUseCase
+                            appContainer.getWorkoutSessionUseCase,
+                            appContainer.getLastExerciseHistoryUseCase
                         ) as T
                     }
                 }

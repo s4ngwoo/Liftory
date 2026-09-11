@@ -5,7 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,10 +17,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.domain.model.EquipmentType
 import com.example.domain.model.Exercise
+import com.example.domain.model.ExercisePreset
 import com.example.domain.model.RoutineTemplate
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,9 +37,11 @@ fun RoutineTemplateListScreen(
     modifier: Modifier = Modifier
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
+    val routineLastWorkoutMap by viewModel.routineLastWorkoutMap.collectAsStateWithLifecycle()
     val exercises by (exerciseViewModel?.exercises?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList<Exercise>()) })
 
-    var showAddDialog by remember { mutableStateOf(false) }
+    var routineToEdit by remember { mutableStateOf<RoutineTemplate?>(null) }
+    var isCreatingRoutine by remember { mutableStateOf(false) }
     var templateToDelete by remember { mutableStateOf<RoutineTemplate?>(null) }
 
     Scaffold(
@@ -54,7 +65,7 @@ fun RoutineTemplateListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = { isCreatingRoutine = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -74,7 +85,9 @@ fun RoutineTemplateListScreen(
                 RoutineTemplateCard(
                     template = template,
                     exercises = exercises,
+                    lastWorkoutDate = routineLastWorkoutMap[template.id],
                     onApply = { onApplyTemplate(template.id) },
+                    onEdit = { routineToEdit = template },
                     onDelete = { templateToDelete = template }
                 )
             }
@@ -105,7 +118,7 @@ fun RoutineTemplateListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                            Button(onClick = { showAddDialog = true }) {
+                            Button(onClick = { isCreatingRoutine = true }) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("새 루틴 만들기")
@@ -117,12 +130,28 @@ fun RoutineTemplateListScreen(
         }
     }
 
-    if (showAddDialog) {
-        CreateRoutineDialog(
-            onDismiss = { showAddDialog = false },
-            onConfirm = { name ->
-                viewModel.createEmptyTemplate(name)
-                showAddDialog = false
+    if (isCreatingRoutine) {
+        RoutineEditorDialog(
+            initialTemplate = null,
+            availableExercises = exercises,
+            onDismiss = { isCreatingRoutine = false },
+            onSave = { name, presets ->
+                viewModel.createTemplate(name, presets)
+                isCreatingRoutine = false
+            }
+        )
+    }
+
+    if (routineToEdit != null) {
+        RoutineEditorDialog(
+            initialTemplate = routineToEdit,
+            availableExercises = exercises,
+            onDismiss = { routineToEdit = null },
+            onSave = { name, presets ->
+                routineToEdit?.let { template ->
+                    viewModel.updateTemplate(template.id, name, presets)
+                }
+                routineToEdit = null
             }
         )
     }
@@ -156,7 +185,9 @@ fun RoutineTemplateListScreen(
 fun RoutineTemplateCard(
     template: RoutineTemplate,
     exercises: List<Exercise>,
+    lastWorkoutDate: Long? = null,
     onApply: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -175,7 +206,7 @@ fun RoutineTemplateCard(
                 .fillMaxWidth()
                 .padding(18.dp)
         ) {
-            // Header Row: Title + Exercises Badge + Options Menu
+            // Header Row: Title + Exercises Badge + Edit & Options Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -204,39 +235,85 @@ fun RoutineTemplateCard(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = "총 ${template.exercises.size}개 운동 포함",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "총 ${template.exercises.size}개 운동 포함",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (lastWorkoutDate != null) {
+                                val dateStr = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(Date(lastWorkoutDate))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.History,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(11.dp),
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            text = "최근: $dateStr",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Routine",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("이 루틴으로 세션 시작") },
-                            leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                onApply()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("루틴 삭제", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            }
-                        )
+
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("이 루틴으로 세션 시작") },
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onApply()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("루틴 세부 편집") },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onEdit()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("루틴 삭제", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMenu = false
+                                    onDelete()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -249,7 +326,11 @@ fun RoutineTemplateCard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     template.exercises.forEach { preset ->
-                        val exName = exercises.find { it.id == preset.exerciseId }?.name ?: preset.exerciseId
+                        val exercise = exercises.find { it.id == preset.exerciseId }
+                        val exName = exercise?.name ?: preset.exerciseId
+                        val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
+                        val brand = exercise?.machineBrand
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -267,6 +348,18 @@ fun RoutineTemplateCard(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                ) {
+                                    Text(
+                                        text = if (isMachine) (if (!brand.isNullOrBlank()) "⚙️ $brand" else "⚙️ 머신") else "🏋️ 프리",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                        color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
                             }
                             Text(
                                 text = "${preset.defaultWeight}kg × ${preset.defaultReps}회",
@@ -303,35 +396,381 @@ fun RoutineTemplateCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateRoutineDialog(
+fun RoutineEditorDialog(
+    initialTemplate: RoutineTemplate?,
+    availableExercises: List<Exercise>,
     onDismiss: () -> Unit,
-    onConfirm: (name: String) -> Unit
+    onSave: (name: String, presets: List<ExercisePreset>) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialTemplate?.name ?: "") }
+    var presets by remember { mutableStateOf(initialTemplate?.exercises ?: emptyList()) }
+    var showExercisePicker by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("새 루틴 템플릿 생성", fontWeight = FontWeight.Bold) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("루틴 이름 (예: 등 & 이두 데이)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.88f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            Text(
+                text = if (initialTemplate != null) "루틴 세부 편집" else "새 루틴 만들기",
+                fontWeight = FontWeight.Bold
             )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("루틴 이름 (예: 등 & 이두 데이)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "루틴 운동 구성 (총 ${presets.size}개)",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    FilledTonalButton(
+                        onClick = { showExercisePicker = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("운동 추가", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                if (presets.isEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "포함된 운동이 없습니다",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "우측 상단의 '+ 운동 추가'를 눌러 종목을 추가하세요",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    presets.forEachIndexed { index, preset ->
+                        val exercise = availableExercises.find { it.id == preset.exerciseId }
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            "${index + 1}. ",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            exercise?.name ?: preset.exerciseId,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                        ) {
+                                            Text(
+                                                text = if (isMachine) "⚙️ 머신" else "🏋️ 프리",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                                color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            presets = presets.filterIndexed { i, _ -> i != index }
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Remove",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    var weightText by remember(preset.defaultWeight) {
+                                        mutableStateOf(if (preset.defaultWeight % 1.0 == 0.0) "${preset.defaultWeight.toInt()}" else "${preset.defaultWeight}")
+                                    }
+                                    var repsText by remember(preset.defaultReps) {
+                                        mutableStateOf("${preset.defaultReps}")
+                                    }
+
+                                    OutlinedTextField(
+                                        value = weightText,
+                                        onValueChange = {
+                                            weightText = it
+                                            val w = it.toDoubleOrNull() ?: 0.0
+                                            presets = presets.mapIndexed { i, p ->
+                                                if (i == index) p.copy(defaultWeight = w) else p
+                                            }
+                                        },
+                                        label = { Text("목표 무게(kg)") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    OutlinedTextField(
+                                        value = repsText,
+                                        onValueChange = {
+                                            repsText = it
+                                            val r = it.toIntOrNull() ?: 0
+                                            presets = presets.mapIndexed { i, p ->
+                                                if (i == index) p.copy(defaultReps = r) else p
+                                            }
+                                        },
+                                        label = { Text("목표 횟수(회)") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name.trim()) },
+                onClick = {
+                    onSave(name.trim(), presets.mapIndexed { idx, p -> p.copy(orderIndex = idx) })
+                },
                 enabled = name.isNotBlank()
             ) {
-                Text("생성")
+                Text("저장")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("취소")
+            }
+        }
+    )
+
+    if (showExercisePicker) {
+        RoutineExercisePickerDialog(
+            exercises = availableExercises,
+            onDismiss = { showExercisePicker = false },
+            onSelectExercise = { ex ->
+                presets = presets + ExercisePreset(
+                    exerciseId = ex.id,
+                    defaultWeight = 20.0,
+                    defaultReps = 10,
+                    orderIndex = presets.size
+                )
+                showExercisePicker = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RoutineExercisePickerDialog(
+    exercises: List<Exercise>,
+    onDismiss: () -> Unit,
+    onSelectExercise: (Exercise) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf<EquipmentType?>(null) }
+
+    val filteredExercises = remember(exercises, searchQuery, selectedFilter) {
+        exercises.filter { exercise ->
+            val matchesQuery = exercise.name.contains(searchQuery, ignoreCase = true) ||
+                    exercise.muscleGroup.contains(searchQuery, ignoreCase = true) ||
+                    (exercise.machineBrand?.contains(searchQuery, ignoreCase = true) == true)
+            val matchesType = selectedFilter == null || exercise.equipmentType == selectedFilter
+            matchesQuery && matchesType
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.85f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        title = { Text("루틴에 추가할 운동 선택", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("운동 이름, 부위, 브랜드 검색...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedFilter == null,
+                        onClick = { selectedFilter = null },
+                        label = { Text("전체") }
+                    )
+                    FilterChip(
+                        selected = selectedFilter == EquipmentType.FREE_WEIGHT,
+                        onClick = { selectedFilter = EquipmentType.FREE_WEIGHT },
+                        label = { Text("🏋️ 프리웨이트") }
+                    )
+                    FilterChip(
+                        selected = selectedFilter == EquipmentType.MACHINE,
+                        onClick = { selectedFilter = EquipmentType.MACHINE },
+                        label = { Text("⚙️ 머신운동") }
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(filteredExercises) { exercise ->
+                        val isMachine = exercise.equipmentType == EquipmentType.MACHINE
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onSelectExercise(exercise) },
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = exercise.name,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = exercise.muscleGroup,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (isMachine && !exercise.machineBrand.isNullOrBlank()) {
+                                            Text(
+                                                text = "• ${exercise.machineBrand}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = if (isMachine) "⚙️ 머신" else "🏋️ 프리",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (filteredExercises.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "검색된 운동이 없습니다",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("닫기")
             }
         }
     )
