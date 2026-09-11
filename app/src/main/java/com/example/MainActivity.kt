@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
 
         // Observe active session: sync system status bar timer via Foreground Service
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
                 container.observeActiveWorkoutSessionUseCase().collect { session ->
                     if (session != null) {
                         val title = SessionNotesManager.getSessionTitle(session.notes).ifBlank { "운동 세션" }

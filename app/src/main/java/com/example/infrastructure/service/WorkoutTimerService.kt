@@ -69,14 +69,16 @@ class WorkoutTimerService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Liftory - 운동 진행 중")
             .setContentText("$sessionTitle · 탭하여 앱으로 이동")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_timer)
             .setUsesChronometer(true)
             .setWhen(startTime)
             .setShowWhen(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(pendingIntent)
             .build()
     }
@@ -86,10 +88,11 @@ class WorkoutTimerService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "운동 타이머 (Workout Timer)",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "진행 중인 운동 세션 시간 알림"
-                setShowBadge(false)
+                setShowBadge(true)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
@@ -97,7 +100,7 @@ class WorkoutTimerService : Service() {
     }
 
     companion object {
-        const val CHANNEL_ID = "liftory_workout_timer_channel"
+        const val CHANNEL_ID = "liftory_workout_timer_channel_v3"
         const val NOTIFICATION_ID = 9001
         const val NOTIFICATION_REQUEST_CODE = 9002
 
