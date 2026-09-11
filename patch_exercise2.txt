@@ -1,3 +1,0 @@
-sed -i 's/fun getAllExercises(): Flow<List<Exercise>>/fun observeAll(): Flow<List<Exercise>>/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt
-sed -i 's/suspend fun insert(exercise: Exercise): Result<Unit>/suspend fun create(exercise: Exercise): Result<Unit>/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt
-sed -i 's/fun searchExercises(query: String): Flow<List<Exercise>>/fun search(query: String): Flow<List<Exercise>>/g' app/src/main/java/com/example/domain/repository/ExerciseRepository.kt

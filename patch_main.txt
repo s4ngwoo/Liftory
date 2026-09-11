@@ -1,1 +1,0 @@
-sed -i 's/syncQueueRepository = container.syncQueueRepository/syncQueueRepository = container.syncQueueRepository,\n      startSyncWorkUseCase = container.startSyncWorkUseCase,\n      createExerciseUseCase = container.createExerciseUseCase,\n      addExerciseSetUseCase = container.addExerciseSetUseCase/g' app/src/main/java/com/example/MainActivity.kt

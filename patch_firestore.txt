@@ -1,5 +1,0 @@
-sed -i 's/"SESSION", "WorkoutSession"/com.example.domain.model.EntityType.SESSION/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt
-sed -i 's/"SET", "ExerciseSet"/com.example.domain.model.EntityType.EXERCISE_SET/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt
-sed -i 's/"EXERCISE", "Exercise"/com.example.domain.model.EntityType.EXERCISE/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt
-sed -i 's/"ROUTINE", "RoutineTemplate"/com.example.domain.model.EntityType.ROUTINE_TEMPLATE/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt
-sed -i 's/pendingUpload.operation == "DELETE"/pendingUpload.operation == com.example.domain.model.SyncOperation.DELETE/g' app/src/main/java/com/example/infrastructure/repository/FirestoreSyncDataSource.kt

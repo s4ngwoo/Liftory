@@ -1,3 +1,0 @@
-sed -i 's/getAllExercises()/observeAll()/g' app/src/main/java/com/example/application/usecase/exercise/ExerciseUseCases.kt
-sed -i 's/insert(/create(/g' app/src/main/java/com/example/application/usecase/exercise/ExerciseUseCases.kt
-sed -i 's/searchExercises(/search(/g' app/src/main/java/com/example/application/usecase/exercise/ExerciseUseCases.kt

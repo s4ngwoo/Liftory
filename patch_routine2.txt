@@ -1,2 +1,0 @@
-sed -i 's/com.example.infrastructure.db.mapper.toEntity(pending)/pending.toEntity()/g' app/src/main/java/com/example/infrastructure/repository/RoutineTemplateRepositoryImpl.kt
-sed -i '/import java.util.UUID/a\import com.example.infrastructure.db.mapper.toEntity\nimport com.example.infrastructure.db.mapper.toDomain' app/src/main/java/com/example/infrastructure/repository/RoutineTemplateRepositoryImpl.kt

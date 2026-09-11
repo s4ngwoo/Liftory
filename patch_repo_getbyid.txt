@@ -1,1 +1,0 @@
-sed -i '/override fun search/i \    override suspend fun getById(id: String): Result<Exercise> = withContext(ioDispatcher) {\n        runCatching {\n            val entity = exerciseDao.getById(id) ?: throw Exception("Exercise not found")\n            entity.toDomain()\n        }\n    }\n' app/src/main/java/com/example/infrastructure/repository/ExerciseRepositoryImpl.kt

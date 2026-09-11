@@ -1,8 +1,0 @@
-        composable("scaffold") {
-            com.example.presentation.MainScreen(
-                appContainer = appContainer,
-                onNavigateToSessionDetail = { sessionId ->
-                    navController.navigate("session/$sessionId")
-                }
-            )
-        }

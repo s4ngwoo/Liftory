@@ -1,2 +1,0 @@
-sed -i '/ExerciseSetRepositoryImpl(/a\            db = database,' app/src/main/java/com/example/di/AppContainer.kt
-sed -i '/RoutineTemplateRepositoryImpl(/a\            db = database,' app/src/main/java/com/example/di/AppContainer.kt

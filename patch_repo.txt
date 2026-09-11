@@ -1,1 +1,0 @@
-sed -i 's/exerciseDao.searchExercises/exerciseDao.searchByName/g' app/src/main/java/com/example/infrastructure/repository/ExerciseRepositoryImpl.kt

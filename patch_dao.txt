@@ -1,2 +1,0 @@
-sed -i 's/suspend fun searchByName(query: String): List<ExerciseEntity>/fun searchByName(query: String): Flow<List<ExerciseEntity>>/g' app/src/main/java/com/example/infrastructure/db/dao/ExerciseDao.kt
-sed -i '/fun searchByName/a\    @Query("SELECT * FROM exercises WHERE muscleGroup = :category ORDER BY name ASC")\n    fun getExercisesByCategory(category: String): Flow<List<ExerciseEntity>>' app/src/main/java/com/example/infrastructure/db/dao/ExerciseDao.kt

@@ -1,1 +1,0 @@
-sed -i 's/dispatcher = ioDispatcher/ioDispatcher = ioDispatcher/g' app/src/main/java/com/example/di/AppContainer.kt

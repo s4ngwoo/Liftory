@@ -1,3 +1,0 @@
-sed -i 's/"Strength Log"/"Liftory"/g' metadata.json
-sed -i 's/>Strength Log</>Liftory</g' app/src/main/res/values/strings.xml
-sed -i 's/rootProject.name = "Strength Log"/rootProject.name = "Liftory"/g' settings.gradle.kts

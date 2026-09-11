@@ -1,1 +1,0 @@
-sed -i 's/pending.toEntity()/com.example.infrastructure.db.mapper.toEntity(pending)/g' app/src/main/java/com/example/infrastructure/repository/RoutineTemplateRepositoryImpl.kt
