@@ -121,18 +121,20 @@ fun WorkoutSessionDetailScreen(
                 },
                 actions = {
                     if (!isCompleted) {
-                        FilledTonalButton(
-                            onClick = { showFinishWorkoutDialog = true },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("완료", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                        if (sets.isNotEmpty()) {
+                            FilledTonalButton(
+                                onClick = { showFinishWorkoutDialog = true },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("완료", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                            }
                         }
                     } else {
                         SuggestionChip(
@@ -153,13 +155,13 @@ fun WorkoutSessionDetailScreen(
             )
         },
         floatingActionButton = {
-            if (!isCompleted) {
+            if (!isCompleted && sets.isNotEmpty()) {
                 FloatingActionButton(
                     onClick = { showExerciseSelection = true },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Set")
+                    Icon(Icons.Default.Add, contentDescription = "운동 종목 추가")
                 }
             }
         },
@@ -224,28 +226,28 @@ fun WorkoutSessionDetailScreen(
                             }
 
                             if (!isCompleted) {
-                                Button(
-                                    onClick = {
-                                        val nextPendingSet = sets.firstOrNull { !it.isCompleted }
-                                        if (nextPendingSet != null) {
-                                            activeSetToComplete = nextPendingSet
-                                        } else if (sets.isEmpty()) {
-                                            showExerciseSelection = true
-                                        } else {
-                                            val lastExId = sets.last().exerciseId
-                                            val lastExName = exercises.find { it.id == lastExId }?.name ?: "운동"
-                                            exerciseForPlannedSet = lastExId to lastExName
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("세트 완료", fontWeight = FontWeight.Bold)
+                                if (sets.isNotEmpty()) {
+                                    Button(
+                                        onClick = {
+                                            val nextPendingSet = sets.firstOrNull { !it.isCompleted }
+                                            if (nextPendingSet != null) {
+                                                activeSetToComplete = nextPendingSet
+                                            } else {
+                                                val lastExId = sets.last().exerciseId
+                                                val lastExName = exercises.find { it.id == lastExId }?.name ?: "운동"
+                                                exerciseForPlannedSet = lastExId to lastExName
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("세트 완료", fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             } else {
                                 Surface(
@@ -455,15 +457,17 @@ fun WorkoutSessionDetailScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Button(
-                            onClick = { showExerciseSelection = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("운동 종목 추가", fontWeight = FontWeight.Bold)
+                        if (!isCompleted && sets.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            OutlinedButton(
+                                onClick = { showExerciseSelection = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("운동 종목 추가", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -474,33 +478,61 @@ fun WorkoutSessionDetailScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
+                            .padding(vertical = 12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text(
-                                text = "기록된 운동이 없습니다",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "우측 하단의 + 버튼을 눌러 종목을 선택하고 첫 세트를 기록해보세요!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Button(onClick = { showExerciseSelection = true }) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("운동 추가하기")
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FitnessCenter,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "첫 운동을 선택하고 기록을 시작하세요",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "오늘 진행할 운동 종목을 추가하면\n세트 기록과 휴식 타이머가 시작됩니다.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                            if (!isCompleted) {
+                                Button(
+                                    onClick = { showExerciseSelection = true },
+                                    modifier = Modifier.fillMaxWidth(0.85f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("첫 운동 추가", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                                }
                             }
                         }
                     }

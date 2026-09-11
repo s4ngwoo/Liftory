@@ -289,52 +289,74 @@ fun ExerciseSetEditorContent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Quick delta buttons (weight delta or time delta for cardio)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isCardio) {
-                listOf("+5분", "+10분", "+15분").forEach { delta ->
+        // Quick delta buttons (weight delta with explicit kg unit, reps delta with explicit 회 unit)
+        if (isCardio) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("+5분", "+10분", "+15분", "+30분").forEach { delta ->
                     val min = delta.removeSuffix("분").toInt()
                     AssistChip(
                         onClick = {
                             val current = repsInput.toIntOrNull() ?: 0
                             repsInput = "${current + min}"
                         },
-                        label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                        label = { Text(delta, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) },
                         modifier = Modifier.weight(1f)
                     )
                 }
-            } else {
-                listOf("+2.5", "+5.0", "+10.0").forEach { delta ->
-                    AssistChip(
-                        onClick = {
-                            val current = weightInput.toDoubleOrNull() ?: 0.0
-                            val add = delta.toDouble()
-                            weightInput = "%.1f".format(current + add).trimEnd('0').trimEnd('.')
-                        },
-                        label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.weight(1f)
-                    )
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("+1.0 kg", "+2.5 kg", "+5.0 kg", "+10.0 kg").forEach { delta ->
+                        val add = delta.removeSuffix(" kg").toDouble()
+                        AssistChip(
+                            onClick = {
+                                val current = weightInput.toDoubleOrNull() ?: 0.0
+                                weightInput = "%.1f".format(current + add).trimEnd('0').trimEnd('.')
+                            },
+                            label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("+1 회", "+2 회", "+5 회").forEach { delta ->
+                        val add = delta.removeSuffix(" 회").toInt()
+                        AssistChip(
+                            onClick = {
+                                val current = repsInput.toIntOrNull() ?: 0
+                                repsInput = "${current + add}"
+                            },
+                            label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Compact Horizontal Row for 3 Inputs:
-        // Weight/Speed (40%) | Reps/Time (30%) | RPE (30%)
-        // Height is only ~64dp, ensuring 100% full visibility above the keyboard!
+        // Primary 2-Column Inputs:
+        // Weight/Speed (50%) | Reps/Time (50%)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // 1. Weight or Speed/Level - Auto focused with ghost placeholder!
+            // 1. Weight or Speed/Level
             OutlinedTextField(
                 value = weightInput,
                 onValueChange = { weightInput = it },
-                label = { Text(if (isCardio) "속도/레벨" else "무게(kg)") },
+                label = { Text(if (isCardio) "속도/레벨" else "무게 (kg)") },
                 placeholder = { Text(ghostWeight) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -345,16 +367,16 @@ fun ExerciseSetEditorContent(
                     onNext = { repsFocusRequester.requestFocus() }
                 ),
                 modifier = Modifier
-                    .weight(1.3f)
+                    .weight(1f)
                     .focusRequester(weightFocusRequester)
                     .testTag("input_weight")
             )
 
-            // 2. Reps or Minutes with ghost placeholder!
+            // 2. Reps or Minutes
             OutlinedTextField(
                 value = repsInput,
                 onValueChange = { repsInput = it },
-                label = { Text(if (isCardio) "시간(분)" else "횟수") },
+                label = { Text(if (isCardio) "시간 (분)" else "횟수 (회)") },
                 placeholder = { Text(ghostReps) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -369,13 +391,21 @@ fun ExerciseSetEditorContent(
                     .focusRequester(repsFocusRequester)
                     .testTag("input_reps")
             )
+        }
 
-            // 3. RPE (Optional) with ghost placeholder!
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 3. Optional RPE (운동 강도) with quick preset chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedTextField(
                 value = rpeInput,
                 onValueChange = { rpeInput = it },
-                label = { Text("RPE") },
-                placeholder = { Text(ghostRpe) },
+                label = { Text("운동 강도 (RPE · 선택)") },
+                placeholder = { Text(if (ghostRpe.isNotBlank()) "직전: $ghostRpe" else "6.0 ~ 10.0") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,
@@ -389,6 +419,18 @@ fun ExerciseSetEditorContent(
                     .focusRequester(rpeFocusRequester)
                     .testTag("input_rpe")
             )
+
+            listOf(7.0, 8.0, 9.0, 10.0).forEach { rpePreset ->
+                val str = if (rpePreset % 1.0 == 0.0) "${rpePreset.toInt()}" else "$rpePreset"
+                FilterChip(
+                    selected = rpeInput == str,
+                    onClick = {
+                        rpeInput = if (rpeInput == str) "" else str
+                    },
+                    label = { Text("${rpePreset.toInt()}", fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
         }
 
         // Live estimated 1RM feedback badge (strength only)

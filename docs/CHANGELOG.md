@@ -11,7 +11,9 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
-### Added
+- Primary CTA Consolidation & Empty Session Overload Elimination: Eliminated 5 competing buttons on newly started sessions (`sets.isEmpty()`) in favor of a single focused welcome card with `[+ 첫 운동 추가]`, hiding the top bar finish button, dashboard set-complete button, and floating action button until exercises are added.
+- Set Editor Input Modernization & Unit Clarity: Expanded weight and reps into a prominent 2-column input grid with explicit units (`+1.0 kg`, `+2.5 kg`, `+5.0 kg`, `+10.0 kg` / `+1 회`, `+2 회`, `+5 회` / `+5분`, `+10분`), moved RPE intensity into an optional secondary section with one-touch preset chips.
+- Exercise Picker Separation: Separated exercise selection for session from exercise creation, changing the top bar title to "운동 선택", adding a distinct text action button for creating new exercises, hiding the FAB in picker mode, and adding explicit `[+ 추가]` buttons on exercise cards.
 - Metrics Separation for Strength Volume vs Cardio Duration: Separated strength volume (kg) and cardio duration (minutes) in statistical queries (`ExerciseSetDao`), mapped human-readable exercise names to PR cards, and eliminated deceptive kg units on cardio exercises.
 - Completed Session State Invariant & Read-Only Summary: Fixed session detail screen for completed workouts (`endTime != null`), freezing elapsed timer, removing finish button and rest timer controls, and rendering a read-only summary card to prevent accidental modifications.
 - Standardized documentation system (`docs/` and `notes/`).

@@ -58,16 +58,32 @@ fun ExerciseListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("운동 라이브러리 (Exercises)", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        if (onExerciseSelected != null) "운동 선택" else "운동 라이브러리", 
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                actions = {
+                    if (onExerciseSelected != null) {
+                        TextButton(onClick = { showAddDialog = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("새 종목 만들기", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Custom Exercise")
+            if (onExerciseSelected == null) {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Custom Exercise")
+                }
             }
         }
     ) { innerPadding ->
@@ -190,6 +206,7 @@ fun ExerciseListScreen(
                     items(filteredExercises) { exercise ->
                         ExerciseCard(
                             exercise = exercise,
+                            isSelectionMode = onExerciseSelected != null,
                             onClick = { 
                                 if (onExerciseSelected != null) {
                                     onExerciseSelected(exercise)
@@ -247,9 +264,14 @@ fun ExerciseListScreen(
 }
 
 @Composable
-fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
+fun ExerciseCard(
+    exercise: Exercise,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false
+) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -309,9 +331,25 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
                     }
                 }
             }
-            if (exercise.isCustom) {
-                Badge(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
-                    Text("Custom", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (exercise.isCustom) {
+                    Badge(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
+                        Text("Custom", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                }
+                if (isSelectionMode) {
+                    FilledTonalButton(
+                        onClick = onClick,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("추가", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
