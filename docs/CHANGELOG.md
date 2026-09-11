@@ -36,8 +36,15 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
   - Dedicated `[🏃 유산소]` filter chips across Exercise Library, Custom Exercise Dialog, and Routine Template Exercise Picker.
   - Smart Set Editor: automatically transitions labels from "Weight / Reps" to "Speed·Level / Time (min)", hides irrelevant 1RM badge, and provides "+5min / +10min / +15min" quick delta chips.
   - Cardio Exercise Group Cards in session detail displaying sets as "속도 6.0 · 20분" and table header "Set | 속도/레벨 | 시간(분) | RPE".
+- Single Active Session Enforcement & Duplicate Session Prevention:
+  - Enforced a strict single active session rule (`endTime == null`) across Domain, Repository, and UI layers so a user cannot run multiple concurrent workouts.
+  - Added `ActiveSessionAlreadyExistsException` and `finishExistingActive` option to `CreateWorkoutSessionUseCase` to automatically finish ongoing sessions when intentionally starting anew.
+  - Implemented interactive conflict dialogs in `WorkoutSessionListScreen` (FAB and empty start button) and `RoutineTemplateListScreen` ("Start Routine"): prompts the user to either resume the existing session, finish it and start a new one, or cancel.
+  - Enhanced session cards (`BentoSessionCard`) with vibrant `[🔥 진행 중]` badges, primary accent borders, and live in-progress indicators vs completed duration.
+  - Self-healing legacy cleanup in `WorkoutSessionRepositoryImpl`: automatically closes orphaned active sessions from older versions on startup.
 
 ### Changed
+
 - Sessions Screen FAB: Hide redundant bottom-right `+` Floating Action Button when sessions list is empty, keeping only the prominent central "Start Today's Workout" card button.
 - Workout Timing Experience: Streamlined to System Status Bar chronometer notification (`WorkoutTimerService`) and in-app persistent top banner, completely removing the floating Picture-in-Picture (PiP) popup to eliminate multitasking obstruction.
 - Foreground Service: Migrated Android 14+ FGS type from `health` to `specialUse` to prevent `SecurityException` when running without hardware sensor permissions.
