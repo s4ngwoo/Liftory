@@ -12,7 +12,8 @@ import com.example.presentation.session.WorkoutSessionViewModel
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    appContainer: AppContainer
+    appContainer: AppContainer,
+    onEnterPip: (() -> Unit)? = null
 ) {
     NavHost(
         navController = navController,
@@ -75,7 +76,8 @@ fun AppNavigation(
                 viewModel = sessionViewModel,
                 exerciseViewModel = exerciseViewModel,
                 onBack = { navController.popBackStack() },
-                restTimerManager = appContainer.restTimerManager
+                restTimerManager = appContainer.restTimerManager,
+                onEnterPip = onEnterPip
             )
         }
     }
