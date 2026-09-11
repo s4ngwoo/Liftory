@@ -82,7 +82,7 @@ fun ExerciseListScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Custom Exercise")
+                    Icon(Icons.Default.Add, contentDescription = "새 운동 종목 등록")
                 }
             }
         }
@@ -164,7 +164,7 @@ fun ExerciseListScreen(
             // Exercise list
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = if (onExerciseSelected == null) 88.dp else 24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (filteredExercises.isEmpty()) {

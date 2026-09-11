@@ -75,7 +75,7 @@ fun RoutineTemplateListScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Routine")
+                Icon(Icons.Default.Add, contentDescription = "새 루틴 만들기")
             }
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -84,7 +84,7 @@ fun RoutineTemplateListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(templates) { template ->

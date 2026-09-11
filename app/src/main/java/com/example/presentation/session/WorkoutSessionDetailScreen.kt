@@ -18,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -171,7 +174,7 @@ fun WorkoutSessionDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ⏱️ [Zone 1: 상단 시간 & 세션 상태 영역 (Time & Lifecycle Zone)]
@@ -210,7 +213,11 @@ fun WorkoutSessionDetailScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(
+                                    modifier = Modifier.semantics(mergeDescendants = true) {
+                                        contentDescription = "총 운동 시간 ${elapsedMinutes}분"
+                                    }
+                                ) {
                                     Text(
                                         text = "총 운동 시간",
                                         style = MaterialTheme.typography.labelSmall,
@@ -220,7 +227,8 @@ fun WorkoutSessionDetailScreen(
                                         text = elapsedFormatted,
                                         style = MaterialTheme.typography.headlineSmall,
                                         fontWeight = FontWeight.Black,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.clearAndSetSemantics { }
                                     )
                                 }
                             }
@@ -293,7 +301,12 @@ fun WorkoutSessionDetailScreen(
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
+                                            Column(
+                                                modifier = Modifier.semantics(mergeDescendants = true) {
+                                                    val stateDesc = if (restTimerState.isStopwatch) "세트 휴식 초시계 진행 중" else "세트 간 휴식 중, 남은 시간 ${restTimerState.remainingSeconds}초"
+                                                    contentDescription = stateDesc
+                                                }
+                                            ) {
                                                 Text(
                                                     text = if (restTimerState.isStopwatch) "세트 휴식 초시계" else "세트 간 휴식 중",
                                                     style = MaterialTheme.typography.labelSmall,
@@ -305,7 +318,8 @@ fun WorkoutSessionDetailScreen(
                                                     text = "%02d:%02d".format(rMin, rSec),
                                                     style = MaterialTheme.typography.titleLarge,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.clearAndSetSemantics { }
                                                 )
                                             }
                                         }
@@ -323,17 +337,23 @@ fun WorkoutSessionDetailScreen(
                                                     Text("+30초", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                                 }
                                             }
-                                            IconButton(onClick = { restTimerManager.togglePauseResume() }) {
+                                            IconButton(
+                                                onClick = { restTimerManager.togglePauseResume() },
+                                                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                            ) {
                                                 Icon(
                                                     imageVector = if (restTimerState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                                    contentDescription = "Pause/Resume",
+                                                    contentDescription = if (restTimerState.isPaused) "타이머 재생" else "타이머 일시정지",
                                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                                 )
                                             }
-                                            IconButton(onClick = { restTimerManager.stopTimer() }) {
+                                            IconButton(
+                                                onClick = { restTimerManager.stopTimer() },
+                                                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                            ) {
                                                 Icon(
                                                     Icons.Default.Close,
-                                                    contentDescription = "Close Timer",
+                                                    contentDescription = "타이머 종료",
                                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                                 )
                                             }
@@ -906,9 +926,9 @@ fun ExerciseGroupCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("상태", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (isCardio) "속도/레벨" else "Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (isCardio) "시간(분)" else "Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("세트", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (isCardio) "속도/레벨" else "무게(kg)", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (isCardio) "시간(분)" else "횟수", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
@@ -938,13 +958,13 @@ fun ExerciseGroupCard(
                             if (!isCompleted) onSetClick(set)
                             else onToggleCompleted(set)
                         },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
                             imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            contentDescription = if (isCompleted) "Completed" else "Check off set",
+                            contentDescription = if (isCompleted) "완료된 세트" else "세트 완료하기",
                             tint = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 

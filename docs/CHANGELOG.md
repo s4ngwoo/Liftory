@@ -11,6 +11,10 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
+- System Theme Inset Integration & Dark Status Bar Icons: Configured `WindowInsetsControllerCompat` in `StrengthLogTheme` to force dark status bar and navigation bar icons, ensuring high contrast on the bright Bento theme (`#FDF7FF`) even on system-wide dark mode devices.
+- Safe Scroll Padding & Bottom Bar Occlusion Elimination: Extended list `contentPadding` across session detail (`bottom = 96.dp`), session list, routine list, and exercise library (`bottom = 88.dp`) to ensure the lowest items and buttons are never obscured by floating action buttons (FAB) or system navigation bars.
+- Accessibility (TalkBack) Silence on Chronometer Ticks: Suppressed disruptive 1-second TalkBack announcements on real-time elapsed workout and rest countdown timers using `Modifier.clearAndSetSemantics { }`, replacing them with static parent descriptions and polite status notifications.
+- Touch Target Expansion & Table Header Localization: Enlarged set completion checkbox hit targets (36dp) and standardized set table headers into clean Korean labels ("세트", "무게(kg)", "횟수", "RPE").
 - Statistics Dashboard Bento Hierarchy & Period Filtering: Reorganized statistics into an intuitive 4-zone layout featuring top period filter chips (Last 7 Days, Last 30 Days, Last 3 Months, All Time) and a 3-column Bento KPI grid (Total Volume, Cardio Minutes, Workout Days), followed by period volume charts and PR badges.
 - Safe Backup Restoration & JSON Pre-validation: Relocated destructive backup and restore controls to an isolated bottom card (Zone 4) and implemented real-time JSON validation with detailed entity counts ("✅ 확인됨: 세션 N개 · 세트 M개 포함") before executing data restoration.
 

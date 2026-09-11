@@ -81,7 +81,7 @@ fun StatisticsDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             // 🎯 [Zone 1: 기간 필터 & 핵심 성과 요약 (Bento KPI Grid)]
