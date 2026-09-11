@@ -60,6 +60,7 @@ open class FakeSetRepository : ExerciseSetRepository {
     }
     override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
     override fun observeBySession(sessionId: String): Flow<List<ExerciseSet>> = flowOf(createdSets)
+    override suspend fun getBySession(sessionId: String): List<ExerciseSet> = createdSets.filter { it.sessionId == sessionId }
     override suspend fun getLastHistoryForExercise(
         exerciseId: String,
         currentSessionId: String?

@@ -20,6 +20,7 @@ class FakeExerciseHistorySetRepository : ExerciseSetRepository {
     override suspend fun update(set: ExerciseSet): Result<Unit> = Result.success(Unit)
     override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
     override fun observeBySession(sessionId: String): Flow<List<ExerciseSet>> = flowOf(emptyList())
+    override suspend fun getBySession(sessionId: String): List<ExerciseSet> = emptyList()
 
     override suspend fun getLastHistoryForExercise(
         exerciseId: String,

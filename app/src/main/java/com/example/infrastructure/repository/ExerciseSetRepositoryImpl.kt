@@ -83,6 +83,10 @@ class ExerciseSetRepositoryImpl(
         }
     }
 
+    override suspend fun getBySession(sessionId: String): List<ExerciseSet> = withContext(ioDispatcher) {
+        setDao.getBySession(sessionId).map { it.toDomain() }
+    }
+
     override suspend fun getLastHistoryForExercise(
         exerciseId: String,
         currentSessionId: String?
