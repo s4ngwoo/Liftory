@@ -4,15 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.application.usecase.session.CreateWorkoutSessionUseCase
+import com.example.application.usecase.session.DeleteWorkoutSessionUseCase
+import com.example.application.usecase.session.GetWorkoutSessionUseCase
 import com.example.application.usecase.session.ObserveWorkoutSessionsUseCase
+import com.example.application.usecase.session.UpdateWorkoutSessionUseCase
 import com.example.application.usecase.set.AddExerciseSetUseCase
 import com.example.application.usecase.set.ObserveExerciseSetsUseCase
 import com.example.domain.model.ExerciseSet
 import com.example.domain.model.WorkoutSession
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -22,7 +27,10 @@ class WorkoutSessionViewModel(
     private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
     private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase,
     private val createSessionUseCase: CreateWorkoutSessionUseCase,
-    private val addExerciseSetUseCase: AddExerciseSetUseCase
+    private val addExerciseSetUseCase: AddExerciseSetUseCase,
+    private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
+    private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
+    private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase
 ) : ViewModel() {
 
     val sessionListUiState: StateFlow<List<WorkoutSession>> = observeSessionsUseCase()
@@ -35,6 +43,18 @@ class WorkoutSessionViewModel(
     private val _selectedSessionId = MutableStateFlow<String?>(null)
     val selectedSessionId: StateFlow<String?> = _selectedSessionId.asStateFlow()
 
+    val currentSession: StateFlow<WorkoutSession?> = combine(
+        _selectedSessionId,
+        sessionListUiState
+    ) { id, sessions ->
+        sessions.find { it.id == id }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val currentSessionSets: StateFlow<List<ExerciseSet>> = _selectedSessionId
         .filterNotNull()
         .flatMapLatest { sessionId -> observeExerciseSetsUseCase(sessionId) }
@@ -59,6 +79,33 @@ class WorkoutSessionViewModel(
         _selectedSessionId.value = id
     }
 
+    fun updateSessionNotes(sessionId: String, newNotes: String) {
+        viewModelScope.launch {
+            val session = sessionListUiState.value.find { it.id == sessionId }
+                ?: getWorkoutSessionUseCase(sessionId)
+                ?: return@launch
+            updateWorkoutSessionUseCase(session.copy(notes = newNotes))
+        }
+    }
+
+    fun updateSession(session: WorkoutSession) {
+        viewModelScope.launch {
+            updateWorkoutSessionUseCase(session)
+        }
+    }
+
+    fun deleteSession(sessionId: String, onDeleted: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            val result = deleteWorkoutSessionUseCase(sessionId)
+            if (result.isSuccess) {
+                if (_selectedSessionId.value == sessionId) {
+                    _selectedSessionId.value = null
+                }
+                onDeleted?.invoke()
+            }
+        }
+    }
+
     fun addSet(exerciseId: String, weight: Double, reps: Int, rpe: Double?) {
         val sessionId = _selectedSessionId.value ?: return
         viewModelScope.launch {
@@ -76,7 +123,10 @@ class WorkoutSessionViewModel(
         private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
         private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase,
         private val createSessionUseCase: CreateWorkoutSessionUseCase,
-        private val addExerciseSetUseCase: AddExerciseSetUseCase
+        private val addExerciseSetUseCase: AddExerciseSetUseCase,
+        private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
+        private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
+        private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -84,7 +134,10 @@ class WorkoutSessionViewModel(
                 observeSessionsUseCase,
                 observeExerciseSetsUseCase,
                 createSessionUseCase,
-                addExerciseSetUseCase
+                addExerciseSetUseCase,
+                updateWorkoutSessionUseCase,
+                deleteWorkoutSessionUseCase,
+                getWorkoutSessionUseCase
             ) as T
         }
     }

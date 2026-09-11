@@ -8,12 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,10 +28,15 @@ fun WorkoutSessionDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
     val sets by viewModel.currentSessionSets.collectAsStateWithLifecycle()
     var showEditorSheet by remember { mutableStateOf(false) }
     var showExerciseSelection by remember { mutableStateOf(false) }
     var selectedExerciseId by remember { mutableStateOf<String?>(null) }
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var editedNotes by remember(currentSession?.notes) { mutableStateOf(currentSession?.notes ?: "") }
 
     val exercises by exerciseViewModel.exercises.collectAsStateWithLifecycle()
 
@@ -44,10 +47,39 @@ fun WorkoutSessionDetailScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("세션 상세 (Session)", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text(
+                            text = currentSession?.notes?.ifBlank { "운동 세션" } ?: "운동 세션",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "세션 상세 (Session Detail)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        editedNotes = currentSession?.notes ?: ""
+                        showEditDialog = true
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Session")
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete Session",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -134,11 +166,87 @@ fun WorkoutSessionDetailScreen(
     }
 
     if (showEditorSheet) {
+        val exerciseName = exercises.find { it.id == selectedExerciseId }?.name ?: "Exercise"
+        val existingSets = sets.filter { it.exerciseId == selectedExerciseId }
+        val lastSet = existingSets.lastOrNull()
+        val lastSummary = if (lastSet != null) {
+            "${lastSet.weight} kg × ${lastSet.reps}회" + if (lastSet.rpe != null) " (RPE ${lastSet.rpe})" else ""
+        } else null
+
         ExerciseSetEditorSheet(
+            exerciseName = exerciseName,
+            setNumber = existingSets.size + 1,
+            lastSetSummary = lastSummary,
             onDismissRequest = { showEditorSheet = false },
             onSaveSet = { weight, reps, rpe ->
                 selectedExerciseId?.let { viewModel.addSet(it, weight, reps, rpe) }
                 showEditorSheet = false
+            }
+        )
+    }
+
+    // Edit Session Notes Dialog
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("세션 이름/메모 수정", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = editedNotes,
+                    onValueChange = { editedNotes = it },
+                    label = { Text("세션 이름 또는 메모") },
+                    placeholder = { Text("예: 가슴 & 삼두 루틴, 하체 폭파 등") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        currentSession?.let { session ->
+                            viewModel.updateSessionNotes(session.id, editedNotes.trim())
+                        }
+                        showEditDialog = false
+                    }
+                ) {
+                    Text("저장")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
+    // Delete Session Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("세션 삭제", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+            text = {
+                Text("정말 이 운동 세션을 삭제하시겠습니까?\n기록된 모든 세트 데이터가 함께 삭제되며 복구할 수 없습니다.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        currentSession?.let { session ->
+                            viewModel.deleteSession(session.id) {
+                                onBack()
+                            }
+                        }
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("삭제")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("취소")
+                }
             }
         )
     }
@@ -177,6 +285,7 @@ fun ExerciseGroupCard(exerciseName: String, sets: List<ExerciseSet>) {
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
                 Text("Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
                 Text("Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
             }
             
             sets.forEachIndexed { index, set ->
@@ -204,6 +313,12 @@ fun ExerciseGroupCard(exerciseName: String, sets: List<ExerciseSet>) {
                     Text(
                         text = "${set.reps}",
                         style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = set.rpe?.let { "$it" } ?: "-",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                 }

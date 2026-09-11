@@ -10,13 +10,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +34,10 @@ fun WorkoutSessionListScreen(
     modifier: Modifier = Modifier
 ) {
     val sessions by viewModel.sessionListUiState.collectAsStateWithLifecycle()
+
+    var sessionToEdit by remember { mutableStateOf<WorkoutSession?>(null) }
+    var editNotesText by remember { mutableStateOf("") }
+    var sessionToDelete by remember { mutableStateOf<WorkoutSession?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -116,21 +121,97 @@ fun WorkoutSessionListScreen(
                         onClick = {
                             viewModel.selectSession(session.id)
                             onNavigateToDetail(session.id)
+                        },
+                        onEdit = {
+                            sessionToEdit = session
+                            editNotesText = session.notes
+                        },
+                        onDelete = {
+                            sessionToDelete = session
                         }
                     )
                 }
             }
         }
     }
+
+    // Edit Notes Dialog
+    if (sessionToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { sessionToEdit = null },
+            title = { Text("세션 이름/메모 수정", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = editNotesText,
+                    onValueChange = { editNotesText = it },
+                    label = { Text("세션 이름 또는 메모") },
+                    placeholder = { Text("예: 가슴 & 삼두 루틴, 하체 폭파 등") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        sessionToEdit?.let { s ->
+                            viewModel.updateSessionNotes(s.id, editNotesText.trim())
+                        }
+                        sessionToEdit = null
+                    }
+                ) {
+                    Text("저장")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { sessionToEdit = null }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (sessionToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { sessionToDelete = null },
+            title = { Text("세션 삭제", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+            text = {
+                Text("정말 이 운동 세션을 삭제하시겠습니까?\n기록된 모든 세트 데이터가 함께 삭제되며 복구할 수 없습니다.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        sessionToDelete?.let { s ->
+                            viewModel.deleteSession(s.id)
+                        }
+                        sessionToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("삭제")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { sessionToDelete = null }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun BentoSessionCard(
     session: WorkoutSession,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     val dateStr = dateFormat.format(Date(session.startTime))
+    var showMenu by remember { mutableStateOf(false) }
+
+    val sessionTitle = session.notes.ifBlank { "Workout Session" }
 
     Card(
         modifier = Modifier
@@ -144,12 +225,12 @@ fun BentoSessionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -163,10 +244,11 @@ fun BentoSessionCard(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Workout Session",
+                    text = sessionTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
                 )
                 Text(
                     text = dateStr,
@@ -174,6 +256,44 @@ fun BentoSessionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Session Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("수정 (Edit)") },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                        onClick = {
+                            showMenu = false
+                            onEdit()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("삭제 (Delete)", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        }
+                    )
+                }
+            }
+
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Details",
