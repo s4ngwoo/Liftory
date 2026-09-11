@@ -47,6 +47,17 @@ fun MainScreen(
                     label = { Text("Sessions") }
                 )
                 NavigationBarItem(
+                    selected = currentRoute == "routines",
+                    onClick = {
+                        bottomNavController.navigate("routines") {
+                            popUpTo(bottomNavController.graph.startDestinationId)
+                            launchSingleTop = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Routines") },
+                    label = { Text("Routines") }
+                )
+                NavigationBarItem(
                     selected = currentRoute == "exercises",
                     onClick = {
                         bottomNavController.navigate("exercises") {
@@ -92,6 +103,22 @@ fun MainScreen(
                 WorkoutSessionListScreen(
                     viewModel = sessionViewModel,
                     onNavigateToDetail = onNavigateToSessionDetail
+                )
+            }
+            composable("routines") {
+                val routineViewModel = viewModel<com.example.presentation.routine.RoutineTemplateViewModel>(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            return com.example.presentation.routine.RoutineTemplateViewModel(
+                                appContainer.observeRoutineTemplatesUseCase,
+                                appContainer.createRoutineTemplateUseCase
+                            ) as T
+                        }
+                    }
+                )
+                com.example.presentation.routine.RoutineTemplateListScreen(
+                    viewModel = routineViewModel,
+                    onApplyTemplate = { /* Apply template action */ }
                 )
             }
             composable("exercises") {

@@ -25,13 +25,13 @@ fun AppNavigation(
             com.example.presentation.auth.LoginScreen(
                 viewModel = authViewModel,
                 onNavigateToHome = {
-                    navController.navigate("scaffold") {
+                    navController.navigate("main") {
                         popUpTo("login") { inclusive = true }
                     }
                 }
             )
         }
-        composable("scaffold") {
+        composable("main") {
             com.example.presentation.MainScreen(
                 appContainer = appContainer,
                 onNavigateToSessionDetail = { sessionId ->

@@ -27,7 +27,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Strength Log", style = MaterialTheme.typography.headlineLarge)
+            Text("Liftory", style = MaterialTheme.typography.headlineLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
             
             when (authState) {
                 is com.example.presentation.auth.AuthState.Loading -> {
