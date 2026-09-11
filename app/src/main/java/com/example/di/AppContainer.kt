@@ -44,6 +44,7 @@ interface AppContainer {
     val syncQueueRepository: SyncQueueRepository
     val authRepository: com.example.domain.repository.AuthRepository
     val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource
+    val syncScheduler: com.example.domain.port.SyncScheduler
     val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase
     val transactionProvider: TransactionProvider
 
@@ -137,8 +138,13 @@ class DefaultAppContainer(
     override val remoteSyncDataSource: com.example.domain.repository.RemoteSyncDataSource by lazy {
         com.example.infrastructure.repository.FirestoreSyncDataSource(authRepository = authRepository)
     }
+
+    override val syncScheduler: com.example.domain.port.SyncScheduler by lazy {
+        com.example.infrastructure.sync.WorkManagerSyncScheduler(context)
+    }
+
     override val startSyncWorkUseCase: com.example.application.usecase.sync.StartSyncWorkUseCase by lazy {
-        com.example.application.usecase.sync.StartSyncWorkUseCase(context)
+        com.example.application.usecase.sync.StartSyncWorkUseCase(syncScheduler)
     }
     
     override val transactionProvider: TransactionProvider by lazy {

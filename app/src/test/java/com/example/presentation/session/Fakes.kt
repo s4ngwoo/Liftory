@@ -66,6 +66,10 @@ open class FakeSetRepository : ExerciseSetRepository {
     ): com.example.domain.model.ExerciseHistoryRecord? = null
 }
 
+/**
+ * Test convenience transaction double.
+ * WARNING (N01.6): This does NOT prove database rollback, isolation, or concurrency race safety.
+ */
 class FakeTransactionProvider : TransactionProvider {
     override suspend fun <T> runAsTransaction(block: suspend () -> T): T {
         return block()

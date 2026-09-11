@@ -1,6 +1,6 @@
 package com.example.domain.repository
 
-import com.example.presentation.auth.AuthState
+import com.example.domain.model.AuthState
 import kotlinx.coroutines.flow.StateFlow
 
 interface AuthRepository {

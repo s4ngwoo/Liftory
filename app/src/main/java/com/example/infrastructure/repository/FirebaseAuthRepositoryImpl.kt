@@ -1,6 +1,6 @@
 package com.example.infrastructure.repository
 
-import com.example.presentation.auth.AuthState
+import com.example.domain.model.AuthState
 import com.example.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider

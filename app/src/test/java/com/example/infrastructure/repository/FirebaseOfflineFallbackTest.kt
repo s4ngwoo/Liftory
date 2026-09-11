@@ -4,7 +4,7 @@ import com.example.domain.model.EntityType
 import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.repository.AuthRepository
-import com.example.presentation.auth.AuthState
+import com.example.domain.model.AuthState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
