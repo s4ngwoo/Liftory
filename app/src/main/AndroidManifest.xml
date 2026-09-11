@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".StrengthLogApplication"
@@ -35,7 +35,11 @@
         <service
             android:name=".infrastructure.service.WorkoutTimerService"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Displays ongoing workout session elapsed time and rest countdown timer" />
+        </service>
     </application>
 
 </manifest>

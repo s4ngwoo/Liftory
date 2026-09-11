@@ -35,11 +35,17 @@ class WorkoutTimerService : Service() {
         val notification = buildNotification(sessionId, sessionTitle, startTime)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-            )
+            runCatching {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            }.onFailure {
+                runCatching {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            }
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
