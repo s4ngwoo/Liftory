@@ -75,6 +75,18 @@ class ApplyRoutineTemplateUseCaseTest {
         assertEquals(sessionId, updatedSession?.id)
         assertTrue(updatedSession!!.updatedAt > 0L)
     }
+
+    @Test
+    fun `invoke should fail when template does not exist`() = runTest {
+        val sessionId = "session_1"
+        workoutSessionRepository.sessions.add(WorkoutSession(id = sessionId, startTime = 0L))
+
+        val result = applyRoutineTemplateUseCase(sessionId, "missing_template")
+
+        assertTrue(result.isFailure)
+        assertEquals("Template not found", result.exceptionOrNull()?.message)
+        assertTrue(exerciseSetRepository.createdSets.isEmpty())
+    }
 }
 
 class FakeRoutineTemplateRepository : RoutineTemplateRepository {

@@ -6,6 +6,7 @@ import com.example.domain.model.ExerciseSet
 import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.model.WorkoutSession
+import com.example.infrastructure.db.entity.PendingUploadEntity
 import com.example.infrastructure.db.mapper.toDomain
 import com.example.infrastructure.db.mapper.toEntity
 import org.junit.Assert.assertEquals
@@ -65,5 +66,26 @@ class EntityMappersTest {
         val entity = domain.toEntity()
         val restored = entity.toDomain()
         assertEquals(domain, restored)
+    }
+
+    @Test
+    fun pendingUpload_unknownEnums_fallBackToSafeDefaults() {
+        val entity = PendingUploadEntity(
+            id = "upload-bad",
+            entityType = "NOT_A_TYPE",
+            entityId = "sess-1",
+            operation = "NOT_AN_OP",
+            payloadJson = "{}",
+            createdAt = 1L,
+            retryCount = 2,
+            lastError = "boom"
+        )
+
+        val restored = entity.toDomain()
+        assertEquals(EntityType.SESSION, restored.entityType)
+        assertEquals(SyncOperation.CREATE, restored.operation)
+        assertEquals("sess-1", restored.entityId)
+        assertEquals(2, restored.retryCount)
+        assertEquals("boom", restored.lastError)
     }
 }
