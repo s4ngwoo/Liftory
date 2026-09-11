@@ -2,12 +2,17 @@ package com.example.infrastructure.db.entity
 
 data class SessionVolumeTuple(
     val startTime: Long,
-    val totalVolume: Double
+    val totalVolume: Double,
+    val cardioMinutes: Int = 0
 )
 
 data class PersonalRecordTuple(
     val exerciseId: String,
-    val maxWeight: Double,
+    val exerciseName: String = "",
+    val equipmentType: String = "FREE_WEIGHT",
+    val maxWeight: Double = 0.0,
+    val maxCardioLevel: Double? = null,
+    val maxCardioMinutes: Int? = null,
     val achievedAt: Long
 )
 

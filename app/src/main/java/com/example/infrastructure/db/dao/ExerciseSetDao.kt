@@ -42,9 +42,12 @@ interface ExerciseSetDao {
     suspend fun getVolumeForSessions(sessionIds: List<String>): Double?
 
     @Query("""
-        SELECT s.startTime as startTime, SUM(e.weight * e.reps) as totalVolume 
+        SELECT s.startTime as startTime, 
+               COALESCE(SUM(CASE WHEN ex.equipmentType != 'CARDIO' OR ex.equipmentType IS NULL THEN e.weight * e.reps ELSE 0 END), 0.0) as totalVolume,
+               COALESCE(SUM(CASE WHEN ex.equipmentType = 'CARDIO' THEN CAST(e.reps AS INTEGER) ELSE 0 END), 0) as cardioMinutes
         FROM exercise_sets e 
         INNER JOIN workout_sessions s ON e.sessionId = s.id 
+        LEFT JOIN exercises ex ON e.exerciseId = ex.id
         WHERE s.startTime >= :startDate AND s.startTime <= :endDate 
         GROUP BY s.startTime 
         ORDER BY s.startTime ASC
@@ -52,10 +55,17 @@ interface ExerciseSetDao {
     fun observeVolumeByPeriod(startDate: Long, endDate: Long): Flow<List<SessionVolumeTuple>>
 
     @Query("""
-        SELECT e.exerciseId as exerciseId, MAX(e.weight) as maxWeight, MAX(s.startTime) as achievedAt
+        SELECT e.exerciseId as exerciseId, 
+               COALESCE(ex.name, e.exerciseId) as exerciseName,
+               COALESCE(ex.equipmentType, 'FREE_WEIGHT') as equipmentType,
+               MAX(CASE WHEN ex.equipmentType != 'CARDIO' OR ex.equipmentType IS NULL THEN e.weight ELSE 0.0 END) as maxWeight,
+               MAX(CASE WHEN ex.equipmentType = 'CARDIO' THEN e.weight ELSE NULL END) as maxCardioLevel,
+               MAX(CASE WHEN ex.equipmentType = 'CARDIO' THEN CAST(e.reps AS INTEGER) ELSE NULL END) as maxCardioMinutes,
+               MAX(s.startTime) as achievedAt
         FROM exercise_sets e
         INNER JOIN workout_sessions s ON e.sessionId = s.id
-        GROUP BY e.exerciseId
+        LEFT JOIN exercises ex ON e.exerciseId = ex.id
+        GROUP BY e.exerciseId, ex.name, ex.equipmentType
     """)
     fun observePersonalRecords(): Flow<List<PersonalRecordTuple>>
 

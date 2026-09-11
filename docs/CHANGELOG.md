@@ -12,6 +12,8 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 ## [Unreleased]
 
 ### Added
+- Metrics Separation for Strength Volume vs Cardio Duration: Separated strength volume (kg) and cardio duration (minutes) in statistical queries (`ExerciseSetDao`), mapped human-readable exercise names to PR cards, and eliminated deceptive kg units on cardio exercises.
+- Completed Session State Invariant & Read-Only Summary: Fixed session detail screen for completed workouts (`endTime != null`), freezing elapsed timer, removing finish button and rest timer controls, and rendering a read-only summary card to prevent accidental modifications.
 - Standardized documentation system (`docs/` and `notes/`).
 - Android Clean Architecture scaffold with Jetpack Compose.
 - Routine template editing: edit routine title, add/remove exercises, adjust target weight/reps presets, with search & equipment-filter exercise library picker (`UpdateRoutineTemplateUseCase`).

@@ -18,7 +18,8 @@ class StatisticsRepositoryImpl(
             tuples.map { tuple ->
                 WorkoutVolume(
                     dateMillis = tuple.startTime,
-                    totalVolume = tuple.totalVolume
+                    totalVolume = tuple.totalVolume,
+                    cardioDurationMinutes = tuple.cardioMinutes
                 )
             }
         }
@@ -29,7 +30,11 @@ class StatisticsRepositoryImpl(
             tuples.map { tuple ->
                 PersonalRecord(
                     exerciseId = tuple.exerciseId,
+                    exerciseName = tuple.exerciseName,
+                    isCardio = tuple.equipmentType.equals("CARDIO", ignoreCase = true),
                     maxWeight = tuple.maxWeight,
+                    maxCardioLevel = tuple.maxCardioLevel,
+                    maxCardioMinutes = tuple.maxCardioMinutes,
                     achievedAt = tuple.achievedAt
                 )
             }

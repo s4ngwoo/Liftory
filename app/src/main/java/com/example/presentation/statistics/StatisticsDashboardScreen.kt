@@ -273,7 +273,12 @@ fun VolumeChart(volumes: List<WorkoutVolume>) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(dateStr, style = MaterialTheme.typography.bodySmall)
-                    Text("${volume.totalVolume} kg", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("근력 ${volume.totalVolume} kg", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        if (volume.cardioDurationMinutes > 0) {
+                            Text("· 유산소 ${volume.cardioDurationMinutes}분", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
             if (volumes.isEmpty()) {
@@ -297,8 +302,37 @@ fun PersonalRecordCard(pr: PersonalRecord) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(pr.exerciseId, fontWeight = FontWeight.Bold)
-            Text("${pr.maxWeight} kg", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = pr.exerciseName.ifBlank { pr.exerciseId },
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                if (pr.isCardio) {
+                    Text(
+                        text = "유산소 운동",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+            if (pr.isCardio) {
+                val levelStr = pr.maxCardioLevel?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "-"
+                val minStr = pr.maxCardioMinutes?.toString() ?: "0"
+                Text(
+                    text = "최고 레벨 $levelStr · 최장 ${minStr}분",
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                Text(
+                    text = "${pr.maxWeight} kg",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
         }
     }
 }

@@ -64,9 +64,12 @@ fun WorkoutSessionDetailScreen(
 
     val exercises by exerciseViewModel.exercises.collectAsStateWithLifecycle()
 
-    // Cumulative Workout Elapsed Timer (ticking every second)
+    val isCompleted = currentSession?.endTime != null
+
+    // Cumulative Workout Elapsed Timer (ticking every second only for active sessions)
     var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(currentSession?.id) {
+    LaunchedEffect(currentSession?.id, isCompleted) {
+        if (isCompleted) return@LaunchedEffect
         while (true) {
             delay(1000L)
             nowMillis = System.currentTimeMillis()
@@ -117,18 +120,30 @@ fun WorkoutSessionDetailScreen(
                     }
                 },
                 actions = {
-                    FilledTonalButton(
-                        onClick = { showFinishWorkoutDialog = true },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("완료", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    if (!isCompleted) {
+                        FilledTonalButton(
+                            onClick = { showFinishWorkoutDialog = true },
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("완료", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("완료됨", fontWeight = FontWeight.Bold) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -138,12 +153,14 @@ fun WorkoutSessionDetailScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showExerciseSelection = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Set")
+            if (!isCompleted) {
+                FloatingActionButton(
+                    onClick = { showExerciseSelection = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Set")
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -206,128 +223,177 @@ fun WorkoutSessionDetailScreen(
                                 }
                             }
 
-                            Button(
-                                onClick = {
-                                    val nextPendingSet = sets.firstOrNull { !it.isCompleted }
-                                    if (nextPendingSet != null) {
-                                        activeSetToComplete = nextPendingSet
-                                    } else if (sets.isEmpty()) {
-                                        showExerciseSelection = true
-                                    } else {
-                                        val lastExId = sets.last().exerciseId
-                                        val lastExName = exercises.find { it.id == lastExId }?.name ?: "운동"
-                                        exerciseForPlannedSet = lastExId to lastExName
+                            if (!isCompleted) {
+                                Button(
+                                    onClick = {
+                                        val nextPendingSet = sets.firstOrNull { !it.isCompleted }
+                                        if (nextPendingSet != null) {
+                                            activeSetToComplete = nextPendingSet
+                                        } else if (sets.isEmpty()) {
+                                            showExerciseSelection = true
+                                        } else {
+                                            val lastExId = sets.last().exerciseId
+                                            val lastExName = exercises.find { it.id == lastExId }?.name ?: "운동"
+                                            exerciseForPlannedSet = lastExId to lastExName
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("세트 완료", fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("운동 완료됨", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("세트 완료", fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        Spacer(modifier = Modifier.height(12.dp))
+                        if (!isCompleted) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                        // 2. 실시간 세트 휴식 타이머 & 컨트롤
-                        if (restTimerState.isRunning) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                            // 2. 실시간 세트 휴식 타이머 & 컨트롤
+                            if (restTimerState.isRunning) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.HourglassBottom,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = if (restTimerState.isStopwatch) "세트 휴식 초시계" else "세트 간 휴식 중",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                            val rMin = restTimerState.remainingSeconds / 60
-                                            val rSec = restTimerState.remainingSeconds % 60
-                                            Text(
-                                                text = "%02d:%02d".format(rMin, rSec),
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
-                                    }
-
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        if (!restTimerState.isStopwatch) {
-                                            FilledTonalButton(
-                                                onClick = { restTimerManager.addSeconds(30) },
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Text("+30초", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.HourglassBottom,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (restTimerState.isStopwatch) "세트 휴식 초시계" else "세트 간 휴식 중",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                                val rMin = restTimerState.remainingSeconds / 60
+                                                val rSec = restTimerState.remainingSeconds % 60
+                                                Text(
+                                                    text = "%02d:%02d".format(rMin, rSec),
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
                                             }
                                         }
-                                        IconButton(onClick = { restTimerManager.togglePauseResume() }) {
-                                            Icon(
-                                                imageVector = if (restTimerState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                                contentDescription = "Pause/Resume",
-                                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
-                                        IconButton(onClick = { restTimerManager.stopTimer() }) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                contentDescription = "Close Timer",
-                                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            if (!restTimerState.isStopwatch) {
+                                                FilledTonalButton(
+                                                    onClick = { restTimerManager.addSeconds(30) },
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                ) {
+                                                    Text("+30초", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            IconButton(onClick = { restTimerManager.togglePauseResume() }) {
+                                                Icon(
+                                                    imageVector = if (restTimerState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                                    contentDescription = "Pause/Resume",
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
+                                            IconButton(onClick = { restTimerManager.stopTimer() }) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Close Timer",
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "휴식 타이머:",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                listOf(60, 90, 120).forEach { sec ->
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "휴식 타이머:",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    listOf(60, 90, 120).forEach { sec ->
+                                        SuggestionChip(
+                                            onClick = { restTimerManager.startTimer(sec) },
+                                            label = { Text("${sec}초", fontWeight = FontWeight.Medium) },
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                    }
                                     SuggestionChip(
-                                        onClick = { restTimerManager.startTimer(sec) },
-                                        label = { Text("${sec}초", fontWeight = FontWeight.Medium) },
+                                        onClick = { restTimerManager.startStopwatch() },
+                                        label = { Text("스톱워치", fontWeight = FontWeight.Medium) },
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                 }
-                                SuggestionChip(
-                                    onClick = { restTimerManager.startStopwatch() },
-                                    label = { Text("스톱워치", fontWeight = FontWeight.Medium) },
-                                    shape = RoundedCornerShape(8.dp)
+                            }
+                        } else {
+                            // Completed state summary row
+                            val strengthSets = sets.filter { set ->
+                                val ex = exercises.find { it.id == set.exerciseId }
+                                ex?.isCardio != true
+                            }
+                            val totalVolume = strengthSets.sumOf { it.weight * it.reps }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "종목 ${groupedSets.keys.size}개 · 총 ${sets.size}세트 완료",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (totalVolume > 0) {
+                                    Text(
+                                        text = "총 볼륨 ${totalVolume.toInt()} kg",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -459,13 +525,19 @@ fun WorkoutSessionDetailScreen(
                             comment = exerciseComment,
                             lastHistory = exerciseHistoryMap[exerciseId],
                             onAddPlannedSet = {
-                                exerciseForPlannedSet = exerciseId to exerciseName
+                                if (!isCompleted) {
+                                    exerciseForPlannedSet = exerciseId to exerciseName
+                                }
                             },
                             onSetClick = { set ->
-                                activeSetToComplete = set
+                                if (!isCompleted) {
+                                    activeSetToComplete = set
+                                }
                             },
                             onToggleCompleted = { set ->
-                                viewModel.toggleSetCompleted(set.id)
+                                if (!isCompleted) {
+                                    viewModel.toggleSetCompleted(set.id)
+                                }
                             },
                             onSaveComment = { newComment ->
                                 currentSession?.let { s ->

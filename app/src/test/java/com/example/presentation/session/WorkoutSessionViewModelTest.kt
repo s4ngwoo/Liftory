@@ -273,5 +273,29 @@ class WorkoutSessionViewModelTest {
         viewModel.toggleSetCompleted("set_2")
         testDispatcher.scheduler.advanceUntilIdle()
     }
+
+    @Test
+    fun `finishSession marks session as completed with endTime`() = runTest {
+        val activeSession = WorkoutSession(
+            id = "sess_active",
+            startTime = 1000L,
+            endTime = null,
+            notes = "오늘의 운동"
+        )
+        fakeSessionRepository.sessions.add(activeSession)
+        testSessionsFlow.value = listOf(activeSession)
+        viewModel.selectSession("sess_active")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var finishCallbackCalled = false
+        viewModel.finishSession("sess_active") {
+            finishCallbackCalled = true
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        org.junit.Assert.assertTrue(finishCallbackCalled)
+        val updated = fakeSessionRepository.sessions.find { it.id == "sess_active" }
+        org.junit.Assert.assertTrue(updated?.endTime != null)
+    }
 }
 
