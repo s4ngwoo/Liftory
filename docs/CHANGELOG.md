@@ -26,7 +26,11 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 - Real-time estimated 1RM calculation with RPE/RIR adjustment (`CalculateOneRepMaxUseCase`) and live feedback badge in `ExerciseSetEditorSheet`.
 - Previous set one-touch copy button and ghost placeholders in `ExerciseSetEditorSheet`.
 - Backup data import and restoration (`ImportWorkoutDataUseCase` & `DataImporterImpl`) supporting JSON and CSV in `StatisticsDashboardScreen`.
-- Clean Architecture and TDD rules added to `GEMINI.md` and `.agents/rules/`.
+- Session Detail UI Reorganization: Unified top time dashboard (cumulative elapsed timer, interactive rest timer with +30s/pause/stop/chips, finish workout button, PiP button) and middle workout content zone (session title/notes, edit/delete, exercises, sets, notes), removing the bottom dock for a consistent user experience.
+- In-App Persistent Workout Timer Banner: Prominent top banner displayed across all main app tabs during an ongoing workout, showing real-time ticking elapsed time and a one-touch `[운동 복귀 >]` quick navigation button.
+- System Status Bar Chronometer Notification: Native Android Foreground Service (`WorkoutTimerService`) displaying an OS-managed ticking chronometer in the system status bar when switching to other apps or leaving the screen, with zero CPU wake battery drain and 1-tap return to the session.
+- Picture-in-Picture (PiP) Floating HUD Popup: Floating 16:9 dark-mode HUD window displaying live elapsed workout time, active rest timer countdown, and session title, with seamless auto-enter on swipe to home (Android 12+) or via manual top-bar button.
+- Reactive Active Workout Tracking (`ObserveActiveWorkoutSessionUseCase`): Clean architecture domain UseCase & repository flow for reactive real-time workout session tracking.
 
 ### Fixed
 - Fixed software keyboard Enter key inserting newlines instead of jumping to the next input field.
