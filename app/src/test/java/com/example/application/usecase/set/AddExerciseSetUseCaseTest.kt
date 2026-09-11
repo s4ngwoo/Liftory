@@ -50,4 +50,50 @@ class AddExerciseSetUseCaseTest {
         assertEquals(sessionId, updatedSession!!.id)
         assertTrue("updatedAt should be greater than original", updatedSession.updatedAt > 0L)
     }
+
+    @Test
+    fun `delete should remove set and bump session timestamp`() = runTest {
+        val deleteUseCase = DeleteExerciseSetUseCase(
+            setRepository,
+            sessionRepository,
+            transactionProvider
+        )
+        val sessionId = "session_1"
+        sessionRepository.sessions.add(
+            WorkoutSession(id = sessionId, startTime = 0L, updatedAt = 1L)
+        )
+
+        val result = deleteUseCase("set_1", sessionId)
+
+        assertTrue(result.isSuccess)
+        assertEquals(sessionId, sessionRepository.updatedSession?.id)
+        assertTrue(sessionRepository.updatedSession!!.updatedAt > 1L)
+    }
+
+    @Test
+    fun `update should persist set changes and bump session timestamp`() = runTest {
+        val updateUseCase = UpdateExerciseSetUseCase(
+            setRepository,
+            sessionRepository,
+            transactionProvider
+        )
+        val sessionId = "session_1"
+        sessionRepository.sessions.add(
+            WorkoutSession(id = sessionId, startTime = 0L, updatedAt = 1L)
+        )
+        val existing = ExerciseSet(
+            id = "set_1",
+            sessionId = sessionId,
+            exerciseId = "ex_squat",
+            weight = 100.0,
+            reps = 5,
+            updatedAt = 1L
+        )
+
+        val result = updateUseCase(existing.copy(weight = 110.0, reps = 3))
+
+        assertTrue(result.isSuccess)
+        assertEquals(sessionId, sessionRepository.updatedSession?.id)
+        assertTrue(sessionRepository.updatedSession!!.updatedAt > 1L)
+    }
 }
