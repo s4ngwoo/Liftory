@@ -28,7 +28,7 @@ fun RoutineTemplateListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Routine Templates", fontWeight = FontWeight.Bold) },
+                title = { Text("루틴 템플릿 (Routines)", fontWeight = FontWeight.Bold) },
             )
         },
         floatingActionButton = {
@@ -42,7 +42,7 @@ fun RoutineTemplateListScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(templates) { template ->
                 RoutineTemplateCard(
@@ -52,12 +52,38 @@ fun RoutineTemplateListScreen(
             }
             if (templates.isEmpty()) {
                 item {
-                    Text(
-                        "No routine templates found.\nCreate one to save time!",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                "등록된 루틴 템플릿이 없습니다",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Push Day, Pull Day, Leg Day처럼 자주 수행하는 운동 구성을 미리 저장하고 바로 불러와보세요!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Button(onClick = { showAddDialog = true }) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("새 루틴 만들기")
+                            }
+                        }
+                    }
                 }
             }
         }

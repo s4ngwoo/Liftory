@@ -111,14 +111,20 @@ fun MainScreen(
                         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                             return com.example.presentation.routine.RoutineTemplateViewModel(
                                 appContainer.observeRoutineTemplatesUseCase,
-                                appContainer.createRoutineTemplateUseCase
+                                appContainer.createRoutineTemplateUseCase,
+                                appContainer.createWorkoutSessionUseCase,
+                                appContainer.applyRoutineTemplateUseCase
                             ) as T
                         }
                     }
                 )
                 com.example.presentation.routine.RoutineTemplateListScreen(
                     viewModel = routineViewModel,
-                    onApplyTemplate = { /* Apply template action */ }
+                    onApplyTemplate = { templateId ->
+                        routineViewModel.applyTemplate(templateId) { newSessionId ->
+                            onNavigateToSessionDetail(newSessionId)
+                        }
+                    }
                 )
             }
             composable("exercises") {

@@ -51,4 +51,37 @@ class RoutineTemplateViewModelTest {
         assertEquals(1, templates.size)
         assertEquals("Pull Day", templates[0].name)
     }
+
+    @Test
+    fun `applyTemplate should create workout session and callback with sessionId`() = runTest {
+        val templateId = "tpl_123"
+        repository.create(RoutineTemplate(id = templateId, name = "Leg Day", exercises = emptyList()))
+        
+        var createdSessionId: String? = null
+        val fakeCreateSessionUseCase = com.example.application.usecase.session.CreateWorkoutSessionUseCase(
+            sessionRepository = object : com.example.domain.repository.WorkoutSessionRepository {
+                override suspend fun create(session: com.example.domain.model.WorkoutSession): Result<com.example.domain.model.WorkoutSession> = Result.success(session)
+                override suspend fun update(session: com.example.domain.model.WorkoutSession): Result<Unit> = Result.success(Unit)
+                override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
+                override suspend fun getById(id: String): com.example.domain.model.WorkoutSession? = null
+                override fun observeAll(): kotlinx.coroutines.flow.Flow<List<com.example.domain.model.WorkoutSession>> = kotlinx.coroutines.flow.flowOf(emptyList())
+            }
+        )
+
+        val vm = RoutineTemplateViewModel(
+            observeRoutineTemplatesUseCase = ObserveRoutineTemplatesUseCase(repository),
+            createRoutineTemplateUseCase = CreateRoutineTemplateUseCase(repository),
+            createWorkoutSessionUseCase = fakeCreateSessionUseCase,
+            applyRoutineTemplateUseCase = null
+        )
+
+        advanceUntilIdle()
+
+        vm.applyTemplate(templateId) { newId ->
+            createdSessionId = newId
+        }
+
+        advanceUntilIdle()
+        org.junit.Assert.assertNotNull(createdSessionId)
+    }
 }

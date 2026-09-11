@@ -44,9 +44,14 @@ class WorkoutSessionViewModel(
             initialValue = emptyList()
         )
 
-    fun createNewSession(notes: String) {
+    fun createNewSession(notes: String, onCreated: ((String) -> Unit)? = null) {
         viewModelScope.launch {
-            createSessionUseCase(notes = notes)
+            val result = createSessionUseCase(notes = notes)
+            if (result.isSuccess) {
+                val session = result.getOrThrow()
+                selectSession(session.id)
+                onCreated?.invoke(session.id)
+            }
         }
     }
 

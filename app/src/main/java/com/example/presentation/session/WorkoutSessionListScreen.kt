@@ -38,7 +38,7 @@ fun WorkoutSessionListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Recent Sessions", fontWeight = FontWeight.Bold) },
+                title = { Text("운동 세션 기록 (Sessions)", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -47,7 +47,11 @@ fun WorkoutSessionListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.createNewSession("New Session") },
+                onClick = {
+                    viewModel.createNewSession("Workout Session") { sessionId ->
+                        onNavigateToDetail(sessionId)
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -63,14 +67,58 @@ fun WorkoutSessionListScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(sessions) { session ->
-                BentoSessionCard(
-                    session = session,
-                    onClick = {
-                        viewModel.selectSession(session.id)
-                        onNavigateToDetail(session.id)
+            if (sessions.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "진행된 운동 세션이 없습니다",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "오늘의 운동을 시작해볼까요? 세션을 생성하고 운동 종목과 세트를 기록하세요.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Button(
+                                onClick = {
+                                    viewModel.createNewSession("Workout Session") { sessionId ->
+                                        onNavigateToDetail(sessionId)
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("오늘의 운동 시작하기")
+                            }
+                        }
                     }
-                )
+                }
+            } else {
+                items(sessions) { session ->
+                    BentoSessionCard(
+                        session = session,
+                        onClick = {
+                            viewModel.selectSession(session.id)
+                            onNavigateToDetail(session.id)
+                        }
+                    )
+                }
             }
         }
     }

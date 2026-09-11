@@ -64,6 +64,9 @@ fun AppNavigation(
                     }
                 }
             )
+            androidx.compose.runtime.LaunchedEffect(sessionId) {
+                sessionViewModel.selectSession(sessionId)
+            }
             WorkoutSessionDetailScreen(
                 viewModel = sessionViewModel,
                 exerciseViewModel = exerciseViewModel,

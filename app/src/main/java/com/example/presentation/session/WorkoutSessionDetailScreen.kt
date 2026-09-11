@@ -35,6 +35,8 @@ fun WorkoutSessionDetailScreen(
     var showExerciseSelection by remember { mutableStateOf(false) }
     var selectedExerciseId by remember { mutableStateOf<String?>(null) }
 
+    val exercises by exerciseViewModel.exercises.collectAsStateWithLifecycle()
+
     // Group sets by exerciseId for Bento Grid display
     val groupedSets = sets.groupBy { it.exerciseId }
 
@@ -42,7 +44,7 @@ fun WorkoutSessionDetailScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Session Details", fontWeight = FontWeight.Bold) },
+                title = { Text("세션 상세 (Session)", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -57,8 +59,8 @@ fun WorkoutSessionDetailScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showExerciseSelection = true },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Set")
             }
@@ -74,24 +76,51 @@ fun WorkoutSessionDetailScreen(
         ) {
             if (groupedSets.isEmpty()) {
                 item {
-                    Text(
-                        text = "No exercises yet. Click + to add a set.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "기록된 운동이 없습니다",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "우측 하단의 + 버튼을 눌러 운동 종목을 선택하고 세트를 기록해보세요!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Button(onClick = { showExerciseSelection = true }) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("운동 추가하기")
+                            }
+                        }
+                    }
                 }
             } else {
                 groupedSets.forEach { (exerciseId, exerciseSets) ->
                     item {
-                        ExerciseGroupCard(exerciseId = exerciseId, sets = exerciseSets)
+                        val exerciseName = exercises.find { it.id == exerciseId }?.name ?: "Exercise: $exerciseId"
+                        ExerciseGroupCard(exerciseName = exerciseName, sets = exerciseSets)
                     }
                 }
             }
         }
     }
 
-    if (showEditorSheet) {
     if (showExerciseSelection) {
         ExerciseSelectionSheet(
             viewModel = exerciseViewModel,
@@ -103,10 +132,11 @@ fun WorkoutSessionDetailScreen(
             onDismissRequest = { showExerciseSelection = false }
         )
     }
+
+    if (showEditorSheet) {
         ExerciseSetEditorSheet(
             onDismissRequest = { showEditorSheet = false },
             onSaveSet = { weight, reps, rpe ->
-                // Basic stub for exerciseId. In Sprint 2, this will be selected via an Exercise Picker.
                 selectedExerciseId?.let { viewModel.addSet(it, weight, reps, rpe) }
                 showEditorSheet = false
             }
@@ -115,7 +145,7 @@ fun WorkoutSessionDetailScreen(
 }
 
 @Composable
-fun ExerciseGroupCard(exerciseId: String, sets: List<ExerciseSet>) {
+fun ExerciseGroupCard(exerciseName: String, sets: List<ExerciseSet>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -130,7 +160,7 @@ fun ExerciseGroupCard(exerciseId: String, sets: List<ExerciseSet>) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Exercise: $exerciseId",
+                text = exerciseName,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
