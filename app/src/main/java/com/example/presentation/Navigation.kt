@@ -73,7 +73,8 @@ fun AppNavigation(
             WorkoutSessionDetailScreen(
                 viewModel = sessionViewModel,
                 exerciseViewModel = exerciseViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                restTimerManager = appContainer.restTimerManager
             )
         }
     }

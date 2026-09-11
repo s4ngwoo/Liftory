@@ -2,9 +2,11 @@ package com.example.presentation.session
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -32,8 +34,11 @@ fun ExerciseSetEditorSheet(
     setNumber: Int = 1,
     lastSetSummary: String? = null
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = { BottomSheetDefaults.DragHandle() }
@@ -72,7 +77,7 @@ fun ExerciseSetEditorContent(
     }
 
     LaunchedEffect(Unit) {
-        delay(150)
+        delay(200)
         try {
             weightFocusRequester.requestFocus()
         } catch (_: Exception) {}
@@ -83,8 +88,9 @@ fun ExerciseSetEditorContent(
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 20.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp)
     ) {
         // Top Header
         Row(
@@ -129,17 +135,17 @@ fun ExerciseSetEditorContent(
 
         // Previous Set Reference Banner (if available)
         if (lastSetSummary != null) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "이전 세트 참고: ",
+                    text = "이전 세트: ",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -147,86 +153,105 @@ fun ExerciseSetEditorContent(
                 Text(
                     text = lastSetSummary,
                     style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Input Fields: Bottom-to-Top Filling Order
-        // Visual Stack:
-        // [3. RPE (선택)] - Next jumps here from Reps
-        // [2. Reps (회)] - Next jumps here from Weight
-        // [1. Weight (kg)] - Lowest field, nearest to keyboard, auto-focused on launch!
-
-        // 3. RPE (Optional) - Topmost of the three inputs
-        OutlinedTextField(
-            value = rpeInput,
-            onValueChange = { rpeInput = it },
-            label = { Text("RPE (운동 자각도, 선택: 6~10)") },
-            placeholder = { Text("예: 8.5 (생략 가능)") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { performSave() }
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(rpeFocusRequester)
-                .testTag("input_rpe")
-        )
+        // Quick weight delta buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("+2.5", "+5.0", "+10.0").forEach { delta ->
+                AssistChip(
+                    onClick = {
+                        val current = weightInput.toDoubleOrNull() ?: 0.0
+                        val add = delta.toDouble()
+                        weightInput = "%.1f".format(current + add).trimEnd('0').trimEnd('.')
+                    },
+                    label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 2. Reps - Middle
-        OutlinedTextField(
-            value = repsInput,
-            onValueChange = { repsInput = it },
-            label = { Text("반복 횟수 (Reps)") },
-            placeholder = { Text("예: 10") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { rpeFocusRequester.requestFocus() }
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(repsFocusRequester)
-                .testTag("input_reps")
-        )
+        // Compact Horizontal Row for 3 Inputs:
+        // Weight (40%) | Reps (30%) | RPE (30%)
+        // Height is only ~64dp, ensuring 100% full visibility above the keyboard!
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 1. Weight (kg) - Auto focused!
+            OutlinedTextField(
+                value = weightInput,
+                onValueChange = { weightInput = it },
+                label = { Text("무게(kg)") },
+                placeholder = { Text("0.0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { repsFocusRequester.requestFocus() }
+                ),
+                modifier = Modifier
+                    .weight(1.3f)
+                    .focusRequester(weightFocusRequester)
+                    .testTag("input_weight")
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            // 2. Reps
+            OutlinedTextField(
+                value = repsInput,
+                onValueChange = { repsInput = it },
+                label = { Text("횟수") },
+                placeholder = { Text("0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { rpeFocusRequester.requestFocus() }
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(repsFocusRequester)
+                    .testTag("input_reps")
+            )
 
-        // 1. Weight - Bottom-most input (closest to keyboard, auto-focused)
-        OutlinedTextField(
-            value = weightInput,
-            onValueChange = { weightInput = it },
-            label = { Text("무게 (Weight kg)") },
-            placeholder = { Text("예: 60.0") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { repsFocusRequester.requestFocus() }
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(weightFocusRequester)
-                .testTag("input_weight")
-        )
+            // 3. RPE (Optional)
+            OutlinedTextField(
+                value = rpeInput,
+                onValueChange = { rpeInput = it },
+                label = { Text("RPE") },
+                placeholder = { Text("8.0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { performSave() }
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(rpeFocusRequester)
+                    .testTag("input_rpe")
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Save Set Action Button (right above the keypad)
+        // Save Set Action Button (positioned directly beneath the compact inputs)
         Button(
             onClick = { performSave() },
             modifier = Modifier

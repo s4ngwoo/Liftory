@@ -67,6 +67,7 @@ interface AppContainer {
     val observeRoutineTemplatesUseCase: ObserveRoutineTemplatesUseCase
     val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase
     val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase
+    val deleteRoutineTemplateUseCase: com.example.application.usecase.routine.DeleteRoutineTemplateUseCase
     
     val statisticsRepository: com.example.domain.repository.StatisticsRepository
     val dataExporter: com.example.domain.repository.DataExporter
@@ -191,6 +192,9 @@ class DefaultAppContainer(
     }
     override val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase by lazy {
         ApplyRoutineTemplateUseCase(routineTemplateRepository, exerciseSetRepository, workoutSessionRepository, transactionProvider)
+    }
+    override val deleteRoutineTemplateUseCase: com.example.application.usecase.routine.DeleteRoutineTemplateUseCase by lazy {
+        com.example.application.usecase.routine.DeleteRoutineTemplateUseCase(routineTemplateRepository)
     }
 
     override val statisticsRepository: com.example.domain.repository.StatisticsRepository by lazy {

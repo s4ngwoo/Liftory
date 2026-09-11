@@ -26,3 +26,19 @@ class CreateRoutineTemplateUseCase(
         return repository.create(template)
     }
 }
+
+class DeleteRoutineTemplateUseCase(
+    private val repository: RoutineTemplateRepository
+) {
+    suspend operator fun invoke(id: String): Result<Unit> {
+        return repository.delete(id)
+    }
+}
+
+class GetRoutineTemplateUseCase(
+    private val repository: RoutineTemplateRepository
+) {
+    suspend operator fun invoke(id: String): RoutineTemplate? {
+        return repository.getById(id)
+    }
+}

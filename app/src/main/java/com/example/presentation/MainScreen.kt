@@ -116,13 +116,26 @@ fun MainScreen(
                                 appContainer.observeRoutineTemplatesUseCase,
                                 appContainer.createRoutineTemplateUseCase,
                                 appContainer.createWorkoutSessionUseCase,
-                                appContainer.applyRoutineTemplateUseCase
+                                appContainer.applyRoutineTemplateUseCase,
+                                appContainer.deleteRoutineTemplateUseCase
+                            ) as T
+                        }
+                    }
+                )
+                val exerciseViewModel = viewModel<ExerciseViewModel>(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            return ExerciseViewModel(
+                                appContainer.observeExercisesUseCase,
+                                appContainer.createExerciseUseCase,
+                                appContainer.searchExercisesUseCase
                             ) as T
                         }
                     }
                 )
                 com.example.presentation.routine.RoutineTemplateListScreen(
                     viewModel = routineViewModel,
+                    exerciseViewModel = exerciseViewModel,
                     onApplyTemplate = { templateId ->
                         routineViewModel.applyTemplate(templateId) { newSessionId ->
                             onNavigateToSessionDetail(newSessionId)

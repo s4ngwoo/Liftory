@@ -15,7 +15,12 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 - Standardized documentation system (`docs/` and `notes/`).
 - Android Clean Architecture scaffold with Jetpack Compose.
 - Workout session edit (name/notes) and deletion with confirmation dialog and CASCADE set cleanup.
-- Bottom-to-top layout for `ExerciseSetEditorSheet` with automatic autofocus and previous set reference.
+- Routine template interactive card with exercise preview list, one-tap workout start, and routine deletion.
+- Real-time cumulative workout elapsed timer and finish workout completion dialog.
+- Live rest stopwatch/countdown timer (+30s, pause/resume, stopwatch mode) docked in session detail.
+- Per-exercise evaluation feedback notes section on exercise group cards via `SessionNotesManager`.
+- Clean Architecture and TDD rules added to `GEMINI.md` and `.agents/rules/`.
 
 ### Fixed
-- Fixed software keyboard Enter key inserting newlines instead of jumping to the next input field via `singleLine = true`, `ImeAction.Next`/`Done`, and `FocusRequester`.
+- Fixed software keyboard Enter key inserting newlines instead of jumping to the next input field.
+- Fixed `ExerciseSetEditorSheet` input field being pushed off-screen/hidden beneath the keyboard by adopting a compact horizontal 3-column row (64dp height), `skipPartiallyExpanded = true`, and vertical scrolling.

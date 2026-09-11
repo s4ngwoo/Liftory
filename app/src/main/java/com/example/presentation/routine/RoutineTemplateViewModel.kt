@@ -2,8 +2,12 @@ package com.example.presentation.routine
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.application.usecase.routine.ApplyRoutineTemplateUseCase
 import com.example.application.usecase.routine.CreateRoutineTemplateUseCase
+import com.example.application.usecase.routine.DeleteRoutineTemplateUseCase
 import com.example.application.usecase.routine.ObserveRoutineTemplatesUseCase
+import com.example.application.usecase.session.CreateWorkoutSessionUseCase
+import com.example.domain.model.ExercisePreset
 import com.example.domain.model.RoutineTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,8 +18,9 @@ import kotlinx.coroutines.launch
 class RoutineTemplateViewModel(
     private val observeRoutineTemplatesUseCase: ObserveRoutineTemplatesUseCase,
     private val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase,
-    private val createWorkoutSessionUseCase: com.example.application.usecase.session.CreateWorkoutSessionUseCase? = null,
-    private val applyRoutineTemplateUseCase: com.example.application.usecase.routine.ApplyRoutineTemplateUseCase? = null
+    private val createWorkoutSessionUseCase: CreateWorkoutSessionUseCase? = null,
+    private val applyRoutineTemplateUseCase: ApplyRoutineTemplateUseCase? = null,
+    private val deleteRoutineTemplateUseCase: DeleteRoutineTemplateUseCase? = null
 ) : ViewModel() {
 
     private val _templates = MutableStateFlow<List<RoutineTemplate>>(emptyList())
@@ -33,9 +38,19 @@ class RoutineTemplateViewModel(
         }
     }
 
-    fun createEmptyTemplate(name: String) {
+    fun createTemplate(name: String, presets: List<ExercisePreset> = emptyList()) {
         viewModelScope.launch {
-            createRoutineTemplateUseCase(name, emptyList())
+            createRoutineTemplateUseCase(name, presets)
+        }
+    }
+
+    fun createEmptyTemplate(name: String) {
+        createTemplate(name, emptyList())
+    }
+
+    fun deleteTemplate(templateId: String) {
+        viewModelScope.launch {
+            deleteRoutineTemplateUseCase?.invoke(templateId)
         }
     }
 
