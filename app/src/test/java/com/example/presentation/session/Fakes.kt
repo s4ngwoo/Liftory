@@ -43,15 +43,23 @@ class FakeSessionRepository : WorkoutSessionRepository {
 open class FakeSetRepository : ExerciseSetRepository {
     val createdSets = mutableListOf<ExerciseSet>()
     var createdSet: ExerciseSet? = null
+    var updatedSet: ExerciseSet? = null
 
     override suspend fun create(set: ExerciseSet): Result<ExerciseSet> {
         createdSet = set
         createdSets.add(set)
         return Result.success(set)
     }
-    override suspend fun update(set: ExerciseSet): Result<Unit> = Result.success(Unit)
+    override suspend fun update(set: ExerciseSet): Result<Unit> {
+        updatedSet = set
+        val idx = createdSets.indexOfFirst { it.id == set.id }
+        if (idx != -1) {
+            createdSets[idx] = set
+        }
+        return Result.success(Unit)
+    }
     override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
-    override fun observeBySession(sessionId: String): Flow<List<ExerciseSet>> = flowOf(emptyList())
+    override fun observeBySession(sessionId: String): Flow<List<ExerciseSet>> = flowOf(createdSets)
     override suspend fun getLastHistoryForExercise(
         exerciseId: String,
         currentSessionId: String?

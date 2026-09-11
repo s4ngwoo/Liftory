@@ -38,6 +38,8 @@ fun ExerciseSet.toEntity(): ExerciseSetEntity = ExerciseSetEntity(
     rpe = rpe,
     restSeconds = restSeconds,
     orderIndex = orderIndex,
+    isCompleted = isCompleted,
+    targetReps = targetReps,
     createdAt = createdAt,
     updatedAt = updatedAt
 )
@@ -51,6 +53,8 @@ fun ExerciseSetEntity.toDomain(): ExerciseSet = ExerciseSet(
     rpe = rpe,
     restSeconds = restSeconds,
     orderIndex = orderIndex,
+    isCompleted = isCompleted,
+    targetReps = targetReps,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

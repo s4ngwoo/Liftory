@@ -31,6 +31,8 @@ data class ExerciseSetEntity(
     val rpe: Double?,
     val restSeconds: Int?,
     val orderIndex: Int,
+    val isCompleted: Boolean = true,
+    val targetReps: Int? = null,
     val createdAt: Long,
     val updatedAt: Long
 )

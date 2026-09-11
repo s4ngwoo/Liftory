@@ -37,7 +37,8 @@ class WorkoutSessionViewModel(
     private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
     private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
     private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase,
-    private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null
+    private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null,
+    private val updateExerciseSetUseCase: com.example.application.usecase.set.UpdateExerciseSetUseCase? = null
 ) : ViewModel() {
 
     val sessionListUiState: StateFlow<List<WorkoutSession>> = observeSessionsUseCase()
@@ -180,16 +181,77 @@ class WorkoutSessionViewModel(
         }
     }
 
-    fun addSet(exerciseId: String, weight: Double, reps: Int, rpe: Double?) {
+    fun addSet(
+        exerciseId: String,
+        weight: Double,
+        reps: Int,
+        rpe: Double?,
+        isCompleted: Boolean = true,
+        targetReps: Int? = null,
+        restSeconds: Int? = 90
+    ) {
         val sessionId = _selectedSessionId.value ?: return
+        val currentSets = currentSessionSets.value.filter { it.exerciseId == exerciseId }
+        val nextOrderIndex = (currentSets.maxOfOrNull { it.orderIndex } ?: -1) + 1
         viewModelScope.launch {
             addExerciseSetUseCase(
                 sessionId = sessionId,
                 exerciseId = exerciseId,
                 weight = weight,
                 reps = reps,
-                rpe = rpe
+                rpe = rpe,
+                restSeconds = restSeconds,
+                orderIndex = nextOrderIndex,
+                isCompleted = isCompleted,
+                targetReps = targetReps ?: reps
             )
+        }
+    }
+
+    fun addPlannedSet(
+        exerciseId: String,
+        weight: Double,
+        targetReps: Int,
+        restSeconds: Int? = 90
+    ) {
+        addSet(
+            exerciseId = exerciseId,
+            weight = weight,
+            reps = targetReps,
+            rpe = null,
+            isCompleted = false,
+            targetReps = targetReps,
+            restSeconds = restSeconds
+        )
+    }
+
+    fun completeSet(
+        setId: String,
+        actualReps: Int,
+        rpe: Double? = null,
+        onCompleted: (() -> Unit)? = null
+    ) {
+        val set = currentSessionSets.value.find { it.id == setId } ?: return
+        viewModelScope.launch {
+            val updated = set.copy(
+                reps = actualReps,
+                rpe = rpe ?: set.rpe,
+                isCompleted = true,
+                updatedAt = System.currentTimeMillis()
+            )
+            updateExerciseSetUseCase?.invoke(updated)
+            onCompleted?.invoke()
+        }
+    }
+
+    fun toggleSetCompleted(setId: String) {
+        val set = currentSessionSets.value.find { it.id == setId } ?: return
+        viewModelScope.launch {
+            val updated = set.copy(
+                isCompleted = !set.isCompleted,
+                updatedAt = System.currentTimeMillis()
+            )
+            updateExerciseSetUseCase?.invoke(updated)
         }
     }
 
@@ -201,7 +263,8 @@ class WorkoutSessionViewModel(
         private val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase,
         private val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase,
         private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase,
-        private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null
+        private val getLastExerciseHistoryUseCase: GetLastExerciseHistoryUseCase? = null,
+        private val updateExerciseSetUseCase: com.example.application.usecase.set.UpdateExerciseSetUseCase? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -213,7 +276,8 @@ class WorkoutSessionViewModel(
                 updateWorkoutSessionUseCase,
                 deleteWorkoutSessionUseCase,
                 getWorkoutSessionUseCase,
-                getLastExerciseHistoryUseCase
+                getLastExerciseHistoryUseCase,
+                updateExerciseSetUseCase
             ) as T
         }
     }

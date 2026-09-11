@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,6 +47,9 @@ fun WorkoutSessionDetailScreen(
     var showEditorSheet by remember { mutableStateOf(false) }
     var showExerciseSelection by remember { mutableStateOf(false) }
     var selectedExerciseId by remember { mutableStateOf<String?>(null) }
+
+    var activeSetToComplete by remember { mutableStateOf<ExerciseSet?>(null) }
+    var exerciseForPlannedSet by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -99,8 +103,9 @@ fun WorkoutSessionDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1
                         )
+                        val completedSetsCount = sets.count { it.isCompleted }
                         Text(
-                            text = "총 ${sets.size}세트 완료",
+                            text = if (sets.isEmpty()) "세트 없음" else if (completedSetsCount == sets.size) "총 ${sets.size}세트 완료" else "총 ${completedSetsCount}/${sets.size}세트 완료",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -202,16 +207,27 @@ fun WorkoutSessionDetailScreen(
                             }
 
                             Button(
-                                onClick = { showFinishWorkoutDialog = true },
+                                onClick = {
+                                    val nextPendingSet = sets.firstOrNull { !it.isCompleted }
+                                    if (nextPendingSet != null) {
+                                        activeSetToComplete = nextPendingSet
+                                    } else if (sets.isEmpty()) {
+                                        showExerciseSelection = true
+                                    } else {
+                                        val lastExId = sets.last().exerciseId
+                                        val lastExName = exercises.find { it.id == lastExId }?.name ?: "운동"
+                                        exerciseForPlannedSet = lastExId to lastExName
+                                    }
+                                },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 ),
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                             ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("운동 완료", fontWeight = FontWeight.Bold)
+                                Text("세트 완료", fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -442,6 +458,15 @@ fun WorkoutSessionDetailScreen(
                             sets = exerciseSets,
                             comment = exerciseComment,
                             lastHistory = exerciseHistoryMap[exerciseId],
+                            onAddPlannedSet = {
+                                exerciseForPlannedSet = exerciseId to exerciseName
+                            },
+                            onSetClick = { set ->
+                                activeSetToComplete = set
+                            },
+                            onToggleCompleted = { set ->
+                                viewModel.toggleSetCompleted(set.id)
+                            },
                             onSaveComment = { newComment ->
                                 currentSession?.let { s ->
                                     val updatedNotes = SessionNotesManager.setExerciseComment(
@@ -612,6 +637,39 @@ fun WorkoutSessionDetailScreen(
             }
         )
     }
+
+    // Set Completion & Reps Check-off Dialog
+    activeSetToComplete?.let { setToComplete ->
+        val exName = exercises.find { it.id == setToComplete.exerciseId }?.name ?: "운동"
+        val isCardioEx = exercises.find { it.id == setToComplete.exerciseId }?.isCardio == true
+        SetCompletionDialog(
+            set = setToComplete,
+            exerciseName = exName,
+            isCardio = isCardioEx,
+            onDismiss = { activeSetToComplete = null },
+            onComplete = { actualReps, rpe ->
+                viewModel.completeSet(setToComplete.id, actualReps, rpe)
+                restTimerManager.startTimer(setToComplete.restSeconds ?: 90)
+                activeSetToComplete = null
+            }
+        )
+    }
+
+    // Add Planned Set Dialog
+    exerciseForPlannedSet?.let { (exId, exName) ->
+        val exSets = sets.filter { it.exerciseId == exId }
+        val isCardioEx = exercises.find { it.id == exId }?.isCardio == true
+        AddPlannedSetDialog(
+            exerciseName = exName,
+            lastSet = exSets.lastOrNull(),
+            isCardio = isCardioEx,
+            onDismiss = { exerciseForPlannedSet = null },
+            onAdd = { weight, targetReps ->
+                viewModel.addPlannedSet(exId, weight, targetReps)
+                exerciseForPlannedSet = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -622,6 +680,9 @@ fun ExerciseGroupCard(
     comment: String,
     isCardio: Boolean = false,
     lastHistory: ExerciseHistoryRecord? = null,
+    onAddPlannedSet: () -> Unit,
+    onSetClick: (ExerciseSet) -> Unit,
+    onToggleCompleted: (ExerciseSet) -> Unit,
     onSaveComment: (String) -> Unit
 ) {
     var isEditingComment by remember { mutableStateOf(false) }
@@ -645,17 +706,30 @@ fun ExerciseGroupCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = exerciseName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "${sets.size}세트",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = exerciseName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    val completedCount = sets.count { it.isCompleted }
+                    Text(
+                        text = if (completedCount == sets.size) "${sets.size}세트 완료" else "${completedCount}/${sets.size}세트 완료",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                FilledTonalButton(
+                    onClick = onAddPlannedSet,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("+ 세트", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -718,33 +792,60 @@ fun ExerciseGroupCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(bottom = 6.dp, start = 4.dp, end = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                Text(if (isCardio) "속도/레벨" else "Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                Text(if (isCardio) "시간(분)" else "Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                Text("상태", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (isCardio) "속도/레벨" else "Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (isCardio) "시간(분)" else "Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             // Sets List
             sets.forEachIndexed { index, set ->
+                val isCompleted = set.isCompleted
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 3.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(8.dp),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isCompleted) MaterialTheme.colorScheme.surfaceContainerHigh
+                            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        )
+                        .clickable {
+                            if (!isCompleted) onSetClick(set)
+                            else onToggleCompleted(set)
+                        }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Status Checkbox
+                    IconButton(
+                        onClick = {
+                            if (!isCompleted) onSetClick(set)
+                            else onToggleCompleted(set)
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = if (isCompleted) "Completed" else "Check off set",
+                            tint = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
                     Text(
                         text = "${index + 1}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.width(32.dp)
                     )
+
                     Text(
                         text = if (isCardio) {
                             if (set.weight % 1.0 == 0.0) "${set.weight.toInt()}" else "${set.weight}"
@@ -755,16 +856,37 @@ fun ExerciseGroupCard(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1.2f)
                     )
-                    Text(
-                        text = if (isCardio) "${set.reps}분" else "${set.reps}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f)
-                    )
+
+                    // Reps or Target Reps
+                    if (isCompleted) {
+                        Text(
+                            text = if (isCardio) "${set.reps}분" else "${set.reps}회",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1.2f)
+                        )
+                    } else {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.weight(1.2f)
+                        ) {
+                            Text(
+                                text = if (isCardio) "목표 ${set.targetReps ?: set.reps}분" else "목표 ${set.targetReps ?: set.reps}회",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     Text(
                         text = set.rpe?.let { "$it" } ?: "-",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.width(36.dp)
                     )
                 }
             }
@@ -865,4 +987,299 @@ fun ExerciseGroupCard(
             }
         }
     }
+}
+
+@Composable
+fun SetCompletionDialog(
+    set: ExerciseSet,
+    exerciseName: String,
+    isCardio: Boolean = false,
+    onDismiss: () -> Unit,
+    onComplete: (actualReps: Int, rpe: Double?) -> Unit
+) {
+    val initialReps = set.targetReps ?: set.reps
+    var repsInput by remember { mutableIntStateOf(initialReps) }
+    var selectedRpe by remember { mutableStateOf(set.rpe) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = exerciseName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = if (isCardio) "세트 완료 체크" else "${if (set.weight % 1.0 == 0.0) set.weight.toInt() else set.weight}kg 세트 완료 체크",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Target vs Actual header
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isCardio) "목표 시간" else "목표 횟수",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (isCardio) "${set.targetReps ?: set.reps}분" else "${set.targetReps ?: set.reps}회",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                // Actual Reps Counter
+                Text(
+                    text = if (isCardio) "실제 수행 시간" else "실제 수행 횟수",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    FilledIconButton(
+                        onClick = { if (repsInput > 1) repsInput-- },
+                        modifier = Modifier.size(48.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        )
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(24.dp))
+                    }
+
+                    Text(
+                        text = if (isCardio) "${repsInput}분" else "${repsInput}회",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    FilledIconButton(
+                        onClick = { repsInput++ },
+                        modifier = Modifier.size(48.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+
+                // Quick Increment/Decrement Chips
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    if (isCardio) {
+                        listOf(-5, -1, 1, 5).forEach { diff ->
+                            SuggestionChip(
+                                onClick = { repsInput = (repsInput + diff).coerceAtLeast(1) },
+                                label = { Text("${if (diff > 0) "+$diff" else "$diff"}분") },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    } else {
+                        listOf(-5, -1, 1, 5).forEach { diff ->
+                            SuggestionChip(
+                                onClick = { repsInput = (repsInput + diff).coerceAtLeast(1) },
+                                label = { Text("${if (diff > 0) "+$diff" else "$diff"}") },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+
+                // RPE Selector (Optional)
+                if (!isCardio) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "체감 난이도 (RPE - 선택)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(7.0, 8.0, 8.5, 9.0, 9.5, 10.0).forEach { rpeVal ->
+                                FilterChip(
+                                    selected = selectedRpe == rpeVal,
+                                    onClick = { selectedRpe = if (selectedRpe == rpeVal) null else rpeVal },
+                                    label = { Text("$rpeVal", style = MaterialTheme.typography.labelSmall) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onComplete(repsInput, selectedRpe) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "세트 완료 & 휴식 시작",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("취소")
+            }
+        }
+    )
+}
+
+@Composable
+fun AddPlannedSetDialog(
+    exerciseName: String,
+    lastSet: ExerciseSet?,
+    isCardio: Boolean = false,
+    onDismiss: () -> Unit,
+    onAdd: (weight: Double, targetReps: Int) -> Unit
+) {
+    val initialWeight = lastSet?.weight ?: if (isCardio) 6.0 else 60.0
+    val initialReps = lastSet?.let { it.targetReps ?: it.reps } ?: if (isCardio) 20 else 10
+
+    var weightInput by remember { mutableStateOf(if (initialWeight % 1.0 == 0.0) "${initialWeight.toInt()}" else "$initialWeight") }
+    var repsInput by remember { mutableIntStateOf(initialReps) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "$exerciseName 세트 추가",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Weight input
+                OutlinedTextField(
+                    value = weightInput,
+                    onValueChange = { weightInput = it },
+                    label = { Text(if (isCardio) "목표 속도 / 레벨" else "목표 무게 (kg)") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Reps / Duration
+                Column {
+                    Text(
+                        text = if (isCardio) "목표 시간: ${repsInput}분" else "목표 횟수: ${repsInput}회",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        FilledIconButton(
+                            onClick = { if (repsInput > 1) repsInput-- }
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                        }
+                        Text(
+                            text = if (isCardio) "${repsInput}분" else "${repsInput}회",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        FilledIconButton(
+                            onClick = { repsInput++ }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(-5, -1, 1, 5).forEach { diff ->
+                            SuggestionChip(
+                                onClick = { repsInput = (repsInput + diff).coerceAtLeast(1) },
+                                label = { Text("${if (diff > 0) "+$diff" else "$diff"}") },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val w = weightInput.toDoubleOrNull() ?: 0.0
+                    onAdd(w, repsInput)
+                }
+            ) {
+                Text("세트 등록")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
 }

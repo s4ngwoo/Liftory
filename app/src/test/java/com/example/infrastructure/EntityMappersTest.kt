@@ -44,12 +44,16 @@ class EntityMappersTest {
             reps = 5,
             rpe = 8.5,
             restSeconds = 90,
-            orderIndex = 1
+            orderIndex = 1,
+            isCompleted = false,
+            targetReps = 8
         )
 
         val entity = domain.toEntity()
         val restored = entity.toDomain()
         assertEquals(domain, restored)
+        assertEquals(false, restored.isCompleted)
+        assertEquals(8, restored.targetReps)
     }
 
     @Test

@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
         ExerciseEntity::class,
         PendingUploadEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class StrengthLogDatabase : RoomDatabase() {
@@ -47,6 +47,13 @@ abstract class StrengthLogDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_sets ADD COLUMN isCompleted INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE exercise_sets ADD COLUMN targetReps INTEGER DEFAULT NULL")
+            }
+        }
+
         @Volatile
         private var INSTANCE: StrengthLogDatabase? = null
 
@@ -57,7 +64,7 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                     StrengthLogDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

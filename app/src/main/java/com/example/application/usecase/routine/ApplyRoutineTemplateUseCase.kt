@@ -33,6 +33,8 @@ class ApplyRoutineTemplateUseCase(
                         reps = preset.defaultReps,
                         rpe = null,
                         orderIndex = index,
+                        isCompleted = false,
+                        targetReps = preset.defaultReps,
                         createdAt = now,
                         updatedAt = now
                     )

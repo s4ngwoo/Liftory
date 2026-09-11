@@ -12,14 +12,16 @@ class AddExerciseSetUseCase(
     private val sessionRepository: WorkoutSessionRepository,
     private val transactionProvider: TransactionProvider
 ) {
-    suspend open operator fun invoke(
+    suspend operator fun invoke(
         sessionId: String,
         exerciseId: String,
         weight: Double,
         reps: Int,
         rpe: Double? = null,
         restSeconds: Int? = 90,
-        orderIndex: Int = 0
+        orderIndex: Int = 0,
+        isCompleted: Boolean = true,
+        targetReps: Int? = null
     ): Result<ExerciseSet> = transactionProvider.runAsTransaction {
         val set = ExerciseSet(
             id = UUID.randomUUID().toString(),
@@ -29,7 +31,9 @@ class AddExerciseSetUseCase(
             reps = reps,
             rpe = rpe,
             restSeconds = restSeconds,
-            orderIndex = orderIndex
+            orderIndex = orderIndex,
+            isCompleted = isCompleted,
+            targetReps = targetReps
         )
         val result = setRepository.create(set)
         if (result.isSuccess) {
@@ -46,7 +50,7 @@ class UpdateExerciseSetUseCase(
     private val sessionRepository: WorkoutSessionRepository,
     private val transactionProvider: TransactionProvider
 ) {
-    suspend open operator fun invoke(set: ExerciseSet): Result<Unit> = transactionProvider.runAsTransaction {
+    suspend operator fun invoke(set: ExerciseSet): Result<Unit> = transactionProvider.runAsTransaction {
         val result = setRepository.update(set.copy(updatedAt = System.currentTimeMillis()))
         if (result.isSuccess) {
             sessionRepository.getById(set.sessionId)?.let { session ->
@@ -62,7 +66,7 @@ class DeleteExerciseSetUseCase(
     private val sessionRepository: WorkoutSessionRepository,
     private val transactionProvider: TransactionProvider
 ) {
-    suspend open operator fun invoke(setId: String, sessionId: String): Result<Unit> = transactionProvider.runAsTransaction {
+    suspend operator fun invoke(setId: String, sessionId: String): Result<Unit> = transactionProvider.runAsTransaction {
         val result = setRepository.delete(setId)
         if (result.isSuccess) {
             sessionRepository.getById(sessionId)?.let { session ->

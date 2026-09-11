@@ -12,6 +12,8 @@ data class ExerciseSet(
     val rpe: Double? = null,
     val restSeconds: Int? = null,
     val orderIndex: Int = 0,
+    val isCompleted: Boolean = true,
+    val targetReps: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
