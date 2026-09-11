@@ -37,22 +37,33 @@ fun LoginScreen(
                     Text(
                         text = (authState as com.example.presentation.auth.AuthState.Error).message,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     Button(onClick = { viewModel.signInWithGoogle() }) {
-                        Text("Retry Login")
+                        Text("다시 시도 (Retry)")
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToHome,
+                        modifier = Modifier.fillMaxWidth(0.7f)
+                    ) {
+                        Text("오프라인으로 계속하기 (Continue Offline)")
                     }
                 }
                 else -> {
                     Button(
                         onClick = { viewModel.signInWithGoogle() },
-                        modifier = Modifier.fillMaxWidth(0.6f)
+                        modifier = Modifier.fillMaxWidth(0.7f)
                     ) {
-                        Text("Sign in with Google")
+                        Text("Google 계정으로 로그인")
                     }
                     
-                    TextButton(onClick = onNavigateToHome) {
-                        Text("Continue Offline")
+                    OutlinedButton(
+                        onClick = onNavigateToHome,
+                        modifier = Modifier.fillMaxWidth(0.7f)
+                    ) {
+                        Text("오프라인으로 계속하기")
                     }
                 }
             }

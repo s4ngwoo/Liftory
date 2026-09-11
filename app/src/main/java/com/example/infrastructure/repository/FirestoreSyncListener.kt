@@ -10,16 +10,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class FirestoreSyncListener(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val firestore: FirebaseFirestore? = runCatching { FirebaseFirestore.getInstance() }.getOrNull(),
     private val authRepository: AuthRepository
 ) : SyncListener {
 
     private var sessionsListener: ListenerRegistration? = null
     
     override fun startListening() {
+        val firestoreInstance = firestore ?: run {
+            Log.w("FirestoreSync", "Firebase is not initialized. Listening disabled.")
+            return
+        }
         val userId = authRepository.getCurrentUserId() ?: return
         
-        sessionsListener = firestore.collection("users").document(userId)
+        sessionsListener = firestoreInstance.collection("users").document(userId)
             .collection("sessions")
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {

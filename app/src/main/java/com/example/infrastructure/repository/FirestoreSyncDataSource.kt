@@ -9,16 +9,21 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 class FirestoreSyncDataSource(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val firestore: FirebaseFirestore? = runCatching { FirebaseFirestore.getInstance() }.getOrNull(),
     private val authRepository: AuthRepository
 ) : RemoteSyncDataSource {
 
     override suspend fun sync(pendingUpload: PendingUpload): Result<Unit> {
+        val firestoreInstance = firestore ?: run {
+            Log.w("FirestoreSync", "Firebase is not initialized. Skipping remote sync for ${pendingUpload.id}")
+            return Result.failure(IllegalStateException("Firebase is not initialized. Remote sync skipped."))
+        }
+
         val userId = authRepository.getCurrentUserId()
             ?: return Result.failure(Exception("Not logged in"))
 
         return try {
-            val userRef = firestore.collection("users").document(userId)
+            val userRef = firestoreInstance.collection("users").document(userId)
             val collectionRef = when (pendingUpload.entityType) {
                 com.example.domain.model.EntityType.SESSION -> userRef.collection("sessions")
                 com.example.domain.model.EntityType.SET -> userRef.collection("sets")
