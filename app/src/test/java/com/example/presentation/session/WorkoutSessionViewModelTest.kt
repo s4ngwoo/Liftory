@@ -165,4 +165,48 @@ class WorkoutSessionViewModelTest {
         assertEquals("sess_old", history?.sessionId)
         assertEquals(100.0, history?.sets?.first()?.weight ?: 0.0, 0.01)
     }
+
+    @Test
+    fun `createNewSession when active session exists triggers onActiveConflict callback`() = runTest {
+        val existingSession = WorkoutSession(id = "active_1", startTime = 1000L, endTime = null, notes = "Ongoing Session")
+        fakeSessionRepository.sessions.add(existingSession)
+        testSessionsFlow.value = listOf(existingSession)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var conflictSession: WorkoutSession? = null
+        var createdSessionId: String? = null
+
+        viewModel.createNewSession(
+            notes = "New Session",
+            finishExistingActive = false,
+            onCreated = { createdSessionId = it },
+            onActiveConflict = { conflictSession = it }
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        org.junit.Assert.assertNull(createdSessionId)
+        org.junit.Assert.assertNotNull(conflictSession)
+        assertEquals("active_1", conflictSession?.id)
+    }
+
+    @Test
+    fun `createNewSession with finishExistingActive true ends previous session and creates new`() = runTest {
+        val existingSession = WorkoutSession(id = "active_1", startTime = 1000L, endTime = null, notes = "Ongoing Session")
+        fakeSessionRepository.sessions.add(existingSession)
+        testSessionsFlow.value = listOf(existingSession)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var createdSessionId: String? = null
+        viewModel.createNewSession(
+            notes = "New Session",
+            finishExistingActive = true,
+            onCreated = { createdSessionId = it }
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        org.junit.Assert.assertNotNull(createdSessionId)
+        org.junit.Assert.assertNotNull(fakeSessionRepository.updatedSession?.endTime)
+        assertEquals("active_1", fakeSessionRepository.updatedSession?.id)
+    }
 }
+

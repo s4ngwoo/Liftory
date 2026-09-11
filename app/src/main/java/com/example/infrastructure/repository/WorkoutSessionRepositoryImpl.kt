@@ -94,4 +94,31 @@ class WorkoutSessionRepositoryImpl(
             entity?.toDomain()
         }
     }
+
+    override suspend fun getActiveSession(): WorkoutSession? = withContext(ioDispatcher) {
+        val activeEntities = sessionDao.getActiveSessions()
+        if (activeEntities.isEmpty()) return@withContext null
+
+        if (activeEntities.size > 1) {
+            val keepActive = activeEntities.first()
+            val now = System.currentTimeMillis()
+            for (i in 1 until activeEntities.size) {
+                val older = activeEntities[i]
+                val closeTime = if (older.updatedAt > older.startTime) older.updatedAt else older.startTime + 3600000L
+                val closed = older.copy(
+                    endTime = closeTime,
+                    updatedAt = now
+                )
+                sessionDao.update(closed)
+            }
+            keepActive.toDomain()
+        } else {
+            activeEntities.first().toDomain()
+        }
+    }
+
+    override suspend fun getActiveSessions(): List<WorkoutSession> = withContext(ioDispatcher) {
+        sessionDao.getActiveSessions().map { it.toDomain() }
+    }
 }
+

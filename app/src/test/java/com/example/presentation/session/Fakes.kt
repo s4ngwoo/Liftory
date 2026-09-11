@@ -12,18 +12,33 @@ class FakeSessionRepository : WorkoutSessionRepository {
     val sessions = mutableListOf<WorkoutSession>()
     var updatedSession: WorkoutSession? = null
 
-    override suspend fun create(session: WorkoutSession): Result<WorkoutSession> = Result.success(session)
+    override suspend fun create(session: WorkoutSession): Result<WorkoutSession> {
+        sessions.add(session)
+        return Result.success(session)
+    }
     override suspend fun getById(id: String): WorkoutSession? {
         return sessions.find { it.id == id } ?: WorkoutSession(id = id, startTime = 0L, endTime = null, notes = "", createdAt = 0L, updatedAt = 0L)
     }
     override suspend fun update(session: WorkoutSession): Result<Unit> {
         updatedSession = session
+        val idx = sessions.indexOfFirst { it.id == session.id }
+        if (idx != -1) {
+            sessions[idx] = session
+        } else {
+            sessions.add(session)
+        }
         return Result.success(Unit)
     }
-    override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
-    override fun observeAll(): Flow<List<WorkoutSession>> = flowOf(emptyList())
+    override suspend fun delete(id: String): Result<Unit> {
+        sessions.removeAll { it.id == id }
+        return Result.success(Unit)
+    }
+    override fun observeAll(): Flow<List<WorkoutSession>> = flowOf(sessions)
     override fun observeActiveSession(): Flow<WorkoutSession?> = flowOf(sessions.find { it.endTime == null })
+    override suspend fun getActiveSession(): WorkoutSession? = sessions.find { it.endTime == null }
+    override suspend fun getActiveSessions(): List<WorkoutSession> = sessions.filter { it.endTime == null }
 }
+
 
 open class FakeSetRepository : ExerciseSetRepository {
     val createdSets = mutableListOf<ExerciseSet>()

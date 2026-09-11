@@ -1,6 +1,8 @@
 package com.example.presentation.session
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.domain.model.WorkoutSession
+import com.example.domain.util.SessionNotesManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,10 +38,12 @@ fun WorkoutSessionListScreen(
     modifier: Modifier = Modifier
 ) {
     val sessions by viewModel.sessionListUiState.collectAsStateWithLifecycle()
+    val activeSession by viewModel.activeSession.collectAsStateWithLifecycle()
 
     var sessionToEdit by remember { mutableStateOf<WorkoutSession?>(null) }
     var editNotesText by remember { mutableStateOf("") }
     var sessionToDelete by remember { mutableStateOf<WorkoutSession?>(null) }
+    var sessionConflictToPrompt by remember { mutableStateOf<WorkoutSession?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -54,8 +60,12 @@ fun WorkoutSessionListScreen(
             if (sessions.isNotEmpty()) {
                 FloatingActionButton(
                     onClick = {
-                        viewModel.createNewSession("Workout Session") { sessionId ->
-                            onNavigateToDetail(sessionId)
+                        if (activeSession != null) {
+                            sessionConflictToPrompt = activeSession
+                        } else {
+                            viewModel.createNewSession("Workout Session") { sessionId ->
+                                onNavigateToDetail(sessionId)
+                            }
                         }
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -104,8 +114,12 @@ fun WorkoutSessionListScreen(
                             )
                             Button(
                                 onClick = {
-                                    viewModel.createNewSession("Workout Session") { sessionId ->
-                                        onNavigateToDetail(sessionId)
+                                    if (activeSession != null) {
+                                        sessionConflictToPrompt = activeSession
+                                    } else {
+                                        viewModel.createNewSession("Workout Session") { sessionId ->
+                                            onNavigateToDetail(sessionId)
+                                        }
                                     }
                                 }
                             ) {
@@ -117,6 +131,7 @@ fun WorkoutSessionListScreen(
                     }
                 }
             } else {
+
                 items(sessions) { session ->
                     BentoSessionCard(
                         session = session,
@@ -135,6 +150,58 @@ fun WorkoutSessionListScreen(
                 }
             }
         }
+    }
+
+    // Conflict Dialog when trying to start a new session while one is active
+    if (sessionConflictToPrompt != null) {
+        val ongoing = sessionConflictToPrompt!!
+        val ongoingTitle = SessionNotesManager.getSessionTitle(ongoing.notes).ifBlank { "진행 중인 운동" }
+        AlertDialog(
+            onDismissRequest = { sessionConflictToPrompt = null },
+            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("이미 진행 중인 운동이 있습니다", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "현재 '${ongoingTitle}' 세션이 진행 중입니다.\n한 번에 하나의 운동 세션만 진행할 수 있습니다.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "기존 운동으로 이동하거나, 기존 운동을 종료하고 새 운동을 시작할 수 있습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val targetId = ongoing.id
+                        sessionConflictToPrompt = null
+                        onNavigateToDetail(targetId)
+                    }
+                ) {
+                    Text("진행 중인 운동으로 이동")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { sessionConflictToPrompt = null }) {
+                        Text("취소")
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            sessionConflictToPrompt = null
+                            viewModel.createNewSession("Workout Session", finishExistingActive = true) { newId ->
+                                onNavigateToDetail(newId)
+                            }
+                        }
+                    ) {
+                        Text("종료 후 새로 시작")
+                    }
+                }
+            }
+        )
     }
 
     // Edit Notes Dialog
@@ -209,19 +276,37 @@ fun BentoSessionCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isActive = session.endTime == null
     val dateFormat = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     val dateStr = dateFormat.format(Date(session.startTime))
     var showMenu by remember { mutableStateOf(false) }
 
-    val sessionTitle = session.notes.ifBlank { "Workout Session" }
+    val sessionTitle = remember(session.notes) {
+        val parsed = SessionNotesManager.getSessionTitle(session.notes)
+        if (parsed.isNotBlank()) parsed else "Workout Session"
+    }
+
+    val subtitle = if (isActive) {
+        "🔥 운동 진행 중 • $dateStr"
+    } else {
+        val durationMin = ((session.endTime!! - session.startTime).coerceAtLeast(0L) / 60000L).toInt()
+        "$dateStr • ${durationMin}분 완료"
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (isActive) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            }
         ),
+        border = if (isActive) {
+            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+        } else null,
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(
@@ -234,28 +319,51 @@ fun BentoSessionCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(
+                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = dateStr.take(3),
+                    text = if (isActive) "🔥" else dateStr.take(3),
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = sessionTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isActive) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "진행 중",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
-                    text = sessionTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = dateStr,
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
                 )
             }
 
@@ -304,3 +412,4 @@ fun BentoSessionCard(
         }
     }
 }
+

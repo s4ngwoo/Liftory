@@ -26,6 +26,9 @@ import kotlinx.coroutines.launch
 import com.example.application.usecase.set.GetLastExerciseHistoryUseCase
 import com.example.domain.model.ExerciseHistoryRecord
 
+import com.example.domain.exception.ActiveSessionAlreadyExistsException
+import kotlinx.coroutines.flow.map
+
 class WorkoutSessionViewModel(
     private val observeSessionsUseCase: ObserveWorkoutSessionsUseCase,
     private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase,
@@ -43,6 +46,14 @@ class WorkoutSessionViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    val activeSession: StateFlow<WorkoutSession?> = sessionListUiState.map { list ->
+        list.firstOrNull { it.endTime == null }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
     private val _selectedSessionId = MutableStateFlow<String?>(null)
     val selectedSessionId: StateFlow<String?> = _selectedSessionId.asStateFlow()
@@ -94,13 +105,45 @@ class WorkoutSessionViewModel(
         }
     }
 
-    fun createNewSession(notes: String, onCreated: ((String) -> Unit)? = null) {
+    fun createNewSession(
+        notes: String,
+        finishExistingActive: Boolean = false,
+        onActiveConflict: ((WorkoutSession) -> Unit)? = null,
+        onCreated: ((String) -> Unit)? = null
+    ) {
         viewModelScope.launch {
-            val result = createSessionUseCase(notes = notes)
+            val result = createSessionUseCase(notes = notes, finishExistingActive = finishExistingActive)
             if (result.isSuccess) {
                 val session = result.getOrThrow()
                 selectSession(session.id)
                 onCreated?.invoke(session.id)
+            } else {
+                val exception = result.exceptionOrNull()
+                if (exception is ActiveSessionAlreadyExistsException) {
+                    onActiveConflict?.invoke(exception.activeSession)
+                }
+            }
+        }
+    }
+
+    fun createNewSession(
+        notes: String,
+        onCreated: ((String) -> Unit)? = null
+    ) = createNewSession(
+        notes = notes,
+        finishExistingActive = false,
+        onActiveConflict = null,
+        onCreated = onCreated
+    )
+
+
+    fun finishSession(sessionId: String, onFinished: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            val session = sessionListUiState.value.find { it.id == sessionId }
+                ?: getWorkoutSessionUseCase(sessionId)
+            if (session != null) {
+                updateWorkoutSessionUseCase(session.copy(endTime = System.currentTimeMillis()))
+                onFinished?.invoke()
             }
         }
     }
@@ -108,6 +151,7 @@ class WorkoutSessionViewModel(
     fun selectSession(id: String) {
         _selectedSessionId.value = id
     }
+
 
     fun updateSessionNotes(sessionId: String, newNotes: String) {
         viewModelScope.launch {

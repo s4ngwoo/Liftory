@@ -25,6 +25,8 @@ import com.example.domain.model.EquipmentType
 import com.example.domain.model.Exercise
 import com.example.domain.model.ExercisePreset
 import com.example.domain.model.RoutineTemplate
+import com.example.domain.model.WorkoutSession
+import com.example.domain.util.SessionNotesManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,16 +36,19 @@ import java.util.Locale
 fun RoutineTemplateListScreen(
     viewModel: RoutineTemplateViewModel,
     onApplyTemplate: (templateId: String) -> Unit,
+    onNavigateToSessionDetail: ((sessionId: String) -> Unit)? = null,
     exerciseViewModel: com.example.presentation.exercise.ExerciseViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
+    val activeSession by viewModel.activeSession.collectAsStateWithLifecycle()
     val routineLastWorkoutMap by viewModel.routineLastWorkoutMap.collectAsStateWithLifecycle()
     val exercises by (exerciseViewModel?.exercises?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList<Exercise>()) })
 
     var routineToEdit by remember { mutableStateOf<RoutineTemplate?>(null) }
     var isCreatingRoutine by remember { mutableStateOf(false) }
     var templateToDelete by remember { mutableStateOf<RoutineTemplate?>(null) }
+    var routineConflictToPrompt by remember { mutableStateOf<RoutineTemplate?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -87,11 +92,18 @@ fun RoutineTemplateListScreen(
                     template = template,
                     exercises = exercises,
                     lastWorkoutDate = routineLastWorkoutMap[template.id],
-                    onApply = { onApplyTemplate(template.id) },
+                    onApply = {
+                        if (activeSession != null) {
+                            routineConflictToPrompt = template
+                        } else {
+                            onApplyTemplate(template.id)
+                        }
+                    },
                     onEdit = { routineToEdit = template },
                     onDelete = { templateToDelete = template }
                 )
             }
+
             if (templates.isEmpty()) {
                 item {
                     Card(
@@ -131,7 +143,68 @@ fun RoutineTemplateListScreen(
         }
     }
 
+    // Conflict Dialog when an active session is already running
+    if (routineConflictToPrompt != null) {
+        val targetTemplate = routineConflictToPrompt!!
+        val activeNotes = activeSession?.notes ?: ""
+        val ongoingTitle = SessionNotesManager.getSessionTitle(activeNotes).ifBlank { "진행 중인 운동" }
+        AlertDialog(
+            onDismissRequest = { routineConflictToPrompt = null },
+            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("이미 진행 중인 운동이 있습니다", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "현재 '${ongoingTitle}' 세션이 진행 중입니다.\n한 번에 하나의 운동 세션만 진행할 수 있습니다.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "기존 운동을 종료하고 '${targetTemplate.name}' 루틴을 시작하시겠습니까?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val activeId = activeSession?.id
+                        routineConflictToPrompt = null
+                        if (activeId != null) {
+                            onNavigateToSessionDetail?.invoke(activeId)
+                        }
+                    }
+                ) {
+                    Text("진행 중인 운동으로 이동")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { routineConflictToPrompt = null }) {
+                        Text("취소")
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            val templateId = targetTemplate.id
+                            routineConflictToPrompt = null
+                            viewModel.applyTemplate(
+                                templateId = templateId,
+                                finishExistingActive = true,
+                                onSessionCreated = { newSessionId ->
+                                    onNavigateToSessionDetail?.invoke(newSessionId) ?: onApplyTemplate(templateId)
+                                }
+                            )
+                        }
+                    ) {
+                        Text("종료 후 루틴 시작")
+                    }
+                }
+            }
+        )
+    }
+
     if (isCreatingRoutine) {
+
         RoutineEditorDialog(
             initialTemplate = null,
             availableExercises = exercises,

@@ -42,6 +42,8 @@ class FakeWorkoutSessionRepository : WorkoutSessionRepository {
 
     override fun observeAll(): Flow<List<WorkoutSession>> = _flow
     override fun observeActiveSession(): Flow<WorkoutSession?> = _flow.map { list -> list.find { it.endTime == null } }
+    override suspend fun getActiveSession(): WorkoutSession? = sessions.values.find { it.endTime == null }
+    override suspend fun getActiveSessions(): List<WorkoutSession> = sessions.values.filter { it.endTime == null }
 }
 
 class WorkoutSessionUseCaseTest {
@@ -82,4 +84,42 @@ class WorkoutSessionUseCaseTest {
         assertTrue(deleteResult.isSuccess)
         assertNull(getUseCase(session.id))
     }
+
+    @Test
+    fun createSession_whenActiveSessionExists_returnsFailure() = runTest {
+        // Given an existing active session
+        val firstSession = createUseCase(notes = "First Workout").getOrThrow()
+        assertNull(firstSession.endTime)
+
+        // When trying to create a second session without finishing existing
+        val result = createUseCase(notes = "Second Workout", finishExistingActive = false)
+
+        // Then it must fail with ActiveSessionAlreadyExistsException
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(exception is com.example.domain.exception.ActiveSessionAlreadyExistsException)
+        val conflictEx = exception as com.example.domain.exception.ActiveSessionAlreadyExistsException
+        assertEquals(firstSession.id, conflictEx.activeSession.id)
+    }
+
+    @Test
+    fun createSession_whenActiveSessionExistsAndFinishExistingActiveIsTrue_finishesOldAndStartsNew() = runTest {
+        // Given an existing active session
+        val firstSession = createUseCase(notes = "First Workout").getOrThrow()
+        assertNull(firstSession.endTime)
+
+        // When creating a new session with finishExistingActive = true
+        val result = createUseCase(notes = "Second Workout", finishExistingActive = true)
+
+        // Then it succeeds
+        assertTrue(result.isSuccess)
+        val secondSession = result.getOrThrow()
+        assertEquals("Second Workout", secondSession.notes)
+        assertNull(secondSession.endTime)
+
+        // And the first session is now ended
+        val updatedFirstSession = getUseCase(firstSession.id)
+        assertNotNull(updatedFirstSession?.endTime)
+    }
 }
+

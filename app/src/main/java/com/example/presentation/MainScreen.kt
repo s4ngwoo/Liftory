@@ -176,9 +176,11 @@ fun MainScreen(
                         routineViewModel.applyTemplate(templateId) { newSessionId ->
                             onNavigateToSessionDetail(newSessionId)
                         }
-                    }
+                    },
+                    onNavigateToSessionDetail = onNavigateToSessionDetail
                 )
             }
+
             composable("exercises") {
                 val exerciseViewModel = viewModel<ExerciseViewModel>(
                     factory = object : androidx.lifecycle.ViewModelProvider.Factory {

@@ -16,8 +16,15 @@ interface WorkoutSessionDao {
     @Query("SELECT * FROM workout_sessions WHERE endTime IS NULL ORDER BY startTime DESC LIMIT 1")
     fun observeActiveSession(): Flow<WorkoutSessionEntity?>
 
+    @Query("SELECT * FROM workout_sessions WHERE endTime IS NULL ORDER BY startTime DESC LIMIT 1")
+    suspend fun getActiveSession(): WorkoutSessionEntity?
+
+    @Query("SELECT * FROM workout_sessions WHERE endTime IS NULL ORDER BY startTime DESC")
+    suspend fun getActiveSessions(): List<WorkoutSessionEntity>
+
     @Query("SELECT * FROM workout_sessions WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): WorkoutSessionEntity?
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(session: WorkoutSessionEntity)

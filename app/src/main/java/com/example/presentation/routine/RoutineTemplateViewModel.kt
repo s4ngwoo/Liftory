@@ -18,7 +18,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+import com.example.domain.exception.ActiveSessionAlreadyExistsException
+import com.example.domain.model.WorkoutSession
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+
 class RoutineTemplateViewModel(
+
     private val observeRoutineTemplatesUseCase: ObserveRoutineTemplatesUseCase,
     private val createRoutineTemplateUseCase: CreateRoutineTemplateUseCase,
     private val createWorkoutSessionUseCase: CreateWorkoutSessionUseCase? = null,
@@ -33,6 +40,11 @@ class RoutineTemplateViewModel(
 
     private val _routineLastWorkoutMap = MutableStateFlow<Map<String, Long>>(emptyMap())
     val routineLastWorkoutMap: StateFlow<Map<String, Long>> = _routineLastWorkoutMap.asStateFlow()
+
+    val activeSession: StateFlow<WorkoutSession?> = observeWorkoutSessionsUseCase?.invoke()
+        ?.map { list -> list.firstOrNull { it.endTime == null } }
+        ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        ?: MutableStateFlow(null)
 
     init {
         viewModelScope.launch {
@@ -49,7 +61,7 @@ class RoutineTemplateViewModel(
             viewModelScope.launch {
                 combine(
                     _templates,
-                    observeWorkoutSessionsUseCase().catch { emit(emptyList()) }
+                    observeWorkoutSessionsUseCase.invoke().catch { emit(emptyList()) }
                 ) { currentTemplates, sessions ->
                     val map = mutableMapOf<String, Long>()
                     currentTemplates.forEach { template ->
@@ -96,16 +108,43 @@ class RoutineTemplateViewModel(
         }
     }
 
-    fun applyTemplate(templateId: String, onSessionCreated: (String) -> Unit) {
+    fun applyTemplate(
+        templateId: String,
+        finishExistingActive: Boolean = false,
+        onActiveConflict: ((WorkoutSession) -> Unit)? = null,
+        onSessionCreated: (String) -> Unit
+    ) {
         viewModelScope.launch {
             val template = _templates.value.find { it.id == templateId }
             val sessionName = template?.name ?: "Routine Workout"
-            val sessionResult = createWorkoutSessionUseCase?.invoke(sessionName)
-            if (sessionResult != null && sessionResult.isSuccess) {
-                val session = sessionResult.getOrThrow()
-                applyRoutineTemplateUseCase?.invoke(session.id, templateId)
-                onSessionCreated(session.id)
+            val sessionResult = createWorkoutSessionUseCase?.invoke(
+                notes = sessionName,
+                finishExistingActive = finishExistingActive
+            )
+            if (sessionResult != null) {
+                if (sessionResult.isSuccess) {
+                    val session = sessionResult.getOrThrow()
+                    applyRoutineTemplateUseCase?.invoke(session.id, templateId)
+                    onSessionCreated(session.id)
+                } else {
+                    val ex = sessionResult.exceptionOrNull()
+                    if (ex is ActiveSessionAlreadyExistsException) {
+                        onActiveConflict?.invoke(ex.activeSession)
+                    }
+                }
             }
         }
     }
+
+    fun applyTemplate(
+        templateId: String,
+        onSessionCreated: (String) -> Unit
+    ) = applyTemplate(
+        templateId = templateId,
+        finishExistingActive = false,
+        onActiveConflict = null,
+        onSessionCreated = onSessionCreated
+    )
 }
+
+
