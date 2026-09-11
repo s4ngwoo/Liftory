@@ -53,6 +53,10 @@ class WorkoutTimerService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
     private fun buildNotification(sessionId: String, sessionTitle: String, startTime: Long): Notification {
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             this.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -68,15 +72,15 @@ class WorkoutTimerService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Liftory - 운동 진행 중")
-            .setContentText("$sessionTitle · 탭하여 앱으로 이동")
+            .setContentText("$sessionTitle · 탭하여 앱으로 복귀")
             .setSmallIcon(R.drawable.ic_notification_timer)
             .setUsesChronometer(true)
             .setWhen(startTime)
             .setShowWhen(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(pendingIntent)
@@ -88,11 +92,13 @@ class WorkoutTimerService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "운동 타이머 (Workout Timer)",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "진행 중인 운동 세션 시간 알림"
                 setShowBadge(true)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setSound(null, null)
+                enableVibration(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
@@ -100,7 +106,7 @@ class WorkoutTimerService : Service() {
     }
 
     companion object {
-        const val CHANNEL_ID = "liftory_workout_timer_channel_v3"
+        const val CHANNEL_ID = "liftory_workout_timer_channel_v4"
         const val NOTIFICATION_ID = 9001
         const val NOTIFICATION_REQUEST_CODE = 9002
 
