@@ -102,6 +102,7 @@ dependencies {
   implementation(libs.retrofit)
   implementation(libs.androidx.work.runtime.ktx)
 
+  testImplementation(libs.androidx.room.testing)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.junit)
   testImplementation(libs.junit)
@@ -119,6 +120,10 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 kotlin {

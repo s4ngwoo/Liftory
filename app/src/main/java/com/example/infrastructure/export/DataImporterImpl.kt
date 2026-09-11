@@ -21,12 +21,45 @@ class DataImporterImpl(
         .add(KotlinJsonAdapterFactory())
         .build()
 
+    companion object {
+        const val MAX_SUPPORTED_SCHEMA_VERSION = ExportEntityPayload.CURRENT_SCHEMA_VERSION
+    }
+
     override suspend fun importDataFromJson(jsonString: String): Result<Int> = withContext(ioDispatcher) {
         try {
+            // 1. Version gate: inspect top-level schemaVersion before full deserialization (N02.6, DATA-07)
+            val mapAdapter = moshi.adapter(Map::class.java)
+            val rawMap = try {
+                mapAdapter.fromJson(jsonString) as? Map<*, *>
+            } catch (e: Exception) {
+                return@withContext Result.failure(IllegalArgumentException("Malformed JSON: ${e.message}", e))
+            } ?: return@withContext Result.failure(IllegalArgumentException("Invalid or empty JSON payload"))
+
+            val rawVersion = (rawMap["schemaVersion"] as? Number)?.toInt() ?: 1
+            if (rawVersion > MAX_SUPPORTED_SCHEMA_VERSION || rawVersion < 1) {
+                return@withContext Result.failure(
+                    IllegalArgumentException("Unsupported backup schema version: $rawVersion. Supported versions: 1..$MAX_SUPPORTED_SCHEMA_VERSION")
+                )
+            }
+
             val adapter = moshi.adapter(ExportEntityPayload::class.java)
             val payload = adapter.fromJson(jsonString)
                 ?: return@withContext Result.failure(IllegalArgumentException("Invalid or empty JSON payload"))
 
+            // 2. Pre-validation of foreign keys: all sets must reference an existing or payload session (N02.7, DATA-08)
+            val payloadSessionIds = payload.sessions.map { it.id }.toSet()
+            for (set in payload.sets) {
+                if (!payloadSessionIds.contains(set.sessionId)) {
+                    val existingSession = sessionDao.getById(set.sessionId)
+                    if (existingSession == null) {
+                        return@withContext Result.failure(
+                            IllegalArgumentException("Foreign key violation: set '${set.id}' references non-existent session '${set.sessionId}'")
+                        )
+                    }
+                }
+            }
+
+            // 3. Perform inserts
             var importedCount = 0
             for (session in payload.sessions) {
                 sessionDao.insert(session)

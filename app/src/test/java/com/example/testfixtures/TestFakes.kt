@@ -35,14 +35,13 @@ class FakeTransactionProvider : TransactionProvider {
 }
 
 class FakeWallClock(var currentEpochMillis: Long = 1000000L) : WallClock {
-    override fun epochMillis(): Long = currentEpochMillis
+    override fun nowMillis(): Long = currentEpochMillis
     fun advanceByMillis(delta: Long) {
         currentEpochMillis += delta
     }
 }
 
 class FakeMonotonicClock(var currentNanos: Long = 0L) : MonotonicClock {
-    override fun elapsedRealtimeNanos(): Long = currentNanos
     override fun elapsedRealtimeMillis(): Long = currentNanos / 1_000_000L
     fun advanceByMillis(millis: Long) {
         currentNanos += millis * 1_000_000L
@@ -50,7 +49,7 @@ class FakeMonotonicClock(var currentNanos: Long = 0L) : MonotonicClock {
 }
 
 class FakeIdGenerator(private var nextId: Int = 1) : IdGenerator {
-    override fun generateId(): String = "generated_id_${nextId++}"
+    override fun generate(): String = "generated_id_${nextId++}"
 }
 
 class TestDispatcherProvider(

@@ -129,4 +129,95 @@ class DataImporterImplTest {
         val result = dataImporter.importDataFromJson("{ invalid json }")
         assertTrue(result.isFailure)
     }
+
+    @Test
+    fun `importDataFromJson rejects unknown future schema version without modifying database (DATA-07)`() = runTest {
+        val futureJson = """
+            {
+                "schemaVersion": 99,
+                "exportedAt": 1700000000000,
+                "sessions": [
+                    {"id": "session_future", "startTime": 1690000000000, "createdAt": 1690000000000, "updatedAt": 1690000000000}
+                ],
+                "sets": []
+            }
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromJson(futureJson)
+
+        assertTrue("Expected failure for unsupported schema version", result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(result.exceptionOrNull()?.message?.contains("Unsupported backup schema version: 99") == true)
+        assertEquals("Database should remain unmodified", 0, sessionDao.sessions.size)
+    }
+
+    @Test
+    fun `importDataFromJson rejects orphan sets missing valid session foreign key (DATA-08)`() = runTest {
+        val orphanJson = """
+            {
+                "schemaVersion": 1,
+                "exportedAt": 1700000000000,
+                "sessions": [
+                    {"id": "session_valid", "startTime": 1690000000000, "createdAt": 1690000000000, "updatedAt": 1690000000000}
+                ],
+                "sets": [
+                    {"id": "set_orphan", "sessionId": "session_non_existent", "exerciseId": "ex_bench", "weight": 80.0, "reps": 5, "orderIndex": 1, "createdAt": 1690000500000, "updatedAt": 1690000500000}
+                ]
+            }
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromJson(orphanJson)
+
+        assertTrue("Expected failure due to invalid foreign key reference", result.isFailure)
+        assertEquals("No sessions should be committed when validation fails", 0, sessionDao.sessions.size)
+        assertEquals("No sets should be committed when validation fails", 0, setDao.sets.size)
+    }
+
+    @Test
+    fun `export and import round-trip preserves all sessions and sets semantic equality (DATA-06)`() = runTest {
+        val exporter = DataExporterImpl(sessionDao, setDao, Dispatchers.Unconfined)
+
+        val session = WorkoutSessionEntity(
+            id = "session_roundtrip",
+            startTime = 1700000000000,
+            endTime = 1700003600000,
+            notes = "Roundtrip note",
+            createdAt = 1700000000000,
+            updatedAt = 1700003600000
+        )
+        val set1 = ExerciseSetEntity(
+            id = "set_rt_1",
+            sessionId = "session_roundtrip",
+            exerciseId = "ex_bench",
+            weight = 100.0,
+            reps = 5,
+            rpe = 9.0,
+            restSeconds = 120,
+            orderIndex = 1,
+            isCompleted = true,
+            targetReps = 5,
+            createdAt = 1700000500000,
+            updatedAt = 1700000500000
+        )
+        sessionDao.insert(session)
+        setDao.insert(set1)
+
+        val exportResult = exporter.exportDataAsJson()
+        assertTrue(exportResult.isSuccess)
+        val exportedJson = exportResult.getOrThrow()
+
+        // Create fresh target DAOs
+        val targetSessionDao = FakeWorkoutSessionDao()
+        val targetSetDao = FakeExerciseSetDao()
+        val targetImporter = DataImporterImpl(targetSessionDao, targetSetDao, Dispatchers.Unconfined)
+
+        val importResult = targetImporter.importDataFromJson(exportedJson)
+        assertTrue(importResult.isSuccess)
+        assertEquals(2, importResult.getOrNull())
+
+        assertEquals(1, targetSessionDao.sessions.size)
+        assertEquals(1, targetSetDao.sets.size)
+        assertEquals(session, targetSessionDao.sessions["session_roundtrip"])
+        assertEquals(set1, targetSetDao.sets["set_rt_1"])
+    }
 }

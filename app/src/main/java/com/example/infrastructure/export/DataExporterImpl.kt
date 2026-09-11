@@ -33,7 +33,7 @@ class DataExporterImpl(
             
             // Actually, we can just use the entities. Let's create an Entity Payload instead.
             val payload = ExportEntityPayload(
-                schemaVersion = 1,
+                schemaVersion = ExportEntityPayload.CURRENT_SCHEMA_VERSION,
                 exportedAt = System.currentTimeMillis(),
                 sessions = sessionsEntity,
                 sets = setsEntity

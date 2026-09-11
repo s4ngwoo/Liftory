@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
         PendingUploadEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class StrengthLogDatabase : RoomDatabase() {
     abstract fun workoutSessionDao(): WorkoutSessionDao
@@ -65,7 +65,6 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 scope.launch {
