@@ -22,6 +22,7 @@ class FakeSessionRepository : WorkoutSessionRepository {
     }
     override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
     override fun observeAll(): Flow<List<WorkoutSession>> = flowOf(emptyList())
+    override fun observeActiveSession(): Flow<WorkoutSession?> = flowOf(sessions.find { it.endTime == null })
 }
 
 open class FakeSetRepository : ExerciseSetRepository {

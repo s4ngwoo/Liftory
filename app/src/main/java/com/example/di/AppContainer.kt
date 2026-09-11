@@ -52,6 +52,7 @@ interface AppContainer {
     val updateWorkoutSessionUseCase: UpdateWorkoutSessionUseCase
     val deleteWorkoutSessionUseCase: DeleteWorkoutSessionUseCase
     val observeWorkoutSessionsUseCase: ObserveWorkoutSessionsUseCase
+    val observeActiveWorkoutSessionUseCase: com.example.application.usecase.session.ObserveActiveWorkoutSessionUseCase
 
     val addExerciseSetUseCase: AddExerciseSetUseCase
     val updateExerciseSetUseCase: UpdateExerciseSetUseCase
@@ -158,6 +159,9 @@ class DefaultAppContainer(
     }
     override val observeWorkoutSessionsUseCase: ObserveWorkoutSessionsUseCase by lazy {
         ObserveWorkoutSessionsUseCase(workoutSessionRepository)
+    }
+    override val observeActiveWorkoutSessionUseCase: com.example.application.usecase.session.ObserveActiveWorkoutSessionUseCase by lazy {
+        com.example.application.usecase.session.ObserveActiveWorkoutSessionUseCase(workoutSessionRepository)
     }
 
     override val addExerciseSetUseCase: AddExerciseSetUseCase by lazy {

@@ -88,4 +88,10 @@ class WorkoutSessionRepositoryImpl(
             list.map { it.toDomain() }
         }
     }
+
+    override fun observeActiveSession(): Flow<WorkoutSession?> {
+        return sessionDao.observeActiveSession().map { entity ->
+            entity?.toDomain()
+        }
+    }
 }

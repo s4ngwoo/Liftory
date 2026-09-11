@@ -7,6 +7,7 @@ import com.example.domain.model.WorkoutSession
 import com.example.domain.repository.WorkoutSessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -40,6 +41,7 @@ class FakeWorkoutSessionRepository : WorkoutSessionRepository {
     }
 
     override fun observeAll(): Flow<List<WorkoutSession>> = _flow
+    override fun observeActiveSession(): Flow<WorkoutSession?> = _flow.map { list -> list.find { it.endTime == null } }
 }
 
 class WorkoutSessionUseCaseTest {

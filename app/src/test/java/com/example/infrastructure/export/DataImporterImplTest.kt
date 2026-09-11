@@ -19,6 +19,7 @@ class FakeWorkoutSessionDao : WorkoutSessionDao {
     val sessions = mutableMapOf<String, WorkoutSessionEntity>()
 
     override fun observeAll(): Flow<List<WorkoutSessionEntity>> = flowOf(sessions.values.toList())
+    override fun observeActiveSession(): Flow<WorkoutSessionEntity?> = flowOf(sessions.values.find { it.endTime == null })
     override suspend fun getById(id: String): WorkoutSessionEntity? = sessions[id]
     override suspend fun insert(session: WorkoutSessionEntity) {
         sessions[session.id] = session

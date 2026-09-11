@@ -65,6 +65,7 @@ class RoutineTemplateViewModelTest {
                 override suspend fun delete(id: String): Result<Unit> = Result.success(Unit)
                 override suspend fun getById(id: String): com.example.domain.model.WorkoutSession? = null
                 override fun observeAll(): kotlinx.coroutines.flow.Flow<List<com.example.domain.model.WorkoutSession>> = kotlinx.coroutines.flow.flowOf(emptyList())
+                override fun observeActiveSession(): kotlinx.coroutines.flow.Flow<com.example.domain.model.WorkoutSession?> = kotlinx.coroutines.flow.flowOf(null)
             }
         )
 
@@ -137,6 +138,7 @@ class RoutineTemplateViewModelTest {
                 override suspend fun delete(id: String) = Result.success(Unit)
                 override suspend fun getById(id: String) = null
                 override fun observeAll() = kotlinx.coroutines.flow.flowOf(listOf(pastSession))
+                override fun observeActiveSession(): kotlinx.coroutines.flow.Flow<com.example.domain.model.WorkoutSession?> = kotlinx.coroutines.flow.flowOf(null)
             }
         )
 

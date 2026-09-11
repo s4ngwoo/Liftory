@@ -9,4 +9,5 @@ interface WorkoutSessionRepository {
     suspend fun update(session: WorkoutSession): Result<Unit>
     suspend fun delete(id: String): Result<Unit>
     fun observeAll(): Flow<List<WorkoutSession>>
+    fun observeActiveSession(): Flow<WorkoutSession?>
 }
