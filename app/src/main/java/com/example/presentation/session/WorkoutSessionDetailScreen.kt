@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,7 @@ fun WorkoutSessionDetailScreen(
     viewModel: WorkoutSessionViewModel,
     onBack: () -> Unit,
     restTimerManager: RestTimerManager = remember { RestTimerManager() },
+    onEnterPip: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
@@ -98,41 +100,36 @@ fun WorkoutSessionDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Timer,
-                                contentDescription = null,
-                                modifier = Modifier.size(13.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "운동 시간: $elapsedFormatted",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Text(
+                            text = "총 ${sets.size}세트 완료",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        editedTitle = sessionTitle
-                        showEditDialog = true
-                    }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Session Title")
+                    if (onEnterPip != null) {
+                        IconButton(onClick = onEnterPip) {
+                            Icon(Icons.Default.PictureInPictureAlt, contentDescription = "플로팅 팝업 모드")
+                        }
                     }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete Session",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                    FilledTonalButton(
+                        onClick = { showFinishWorkoutDialog = true },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("완료", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -140,88 +137,6 @@ fun WorkoutSessionDetailScreen(
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        },
-        bottomBar = {
-            // Live Rest Timer Bar (Docked at bottom if running, or quick action)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                AnimatedVisibility(
-                    visible = restTimerState.isRunning,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.HourglassBottom,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (restTimerState.isStopwatch) "세트 휴식 초시계" else "세트 간 휴식 중",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    val rMin = restTimerState.remainingSeconds / 60
-                                    val rSec = restTimerState.remainingSeconds % 60
-                                    Text(
-                                        text = "%02d:%02d".format(rMin, rSec),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (!restTimerState.isStopwatch) {
-                                    FilledTonalButton(
-                                        onClick = { restTimerManager.addSeconds(30) },
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("+30초", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                                IconButton(onClick = { restTimerManager.togglePauseResume() }) {
-                                    Icon(
-                                        imageVector = if (restTimerState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                        contentDescription = "Pause/Resume"
-                                    )
-                                }
-                                IconButton(onClick = { restTimerManager.stopTimer() }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close Timer")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -241,7 +156,175 @@ fun WorkoutSessionDetailScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Action Card: Workout Status, Elapsed Clock, and Rest Quick Launchers
+            // ⏱️ [Zone 1: 상단 시간 & 세션 상태 영역 (Time & Lifecycle Zone)]
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        // 1. 총 누적 운동 시간
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Timer,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "총 운동 시간",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = elapsedFormatted,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Black,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { showFinishWorkoutDialog = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("운동 완료", fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 2. 실시간 세트 휴식 타이머 & 컨트롤
+                        if (restTimerState.isRunning) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.HourglassBottom,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = if (restTimerState.isStopwatch) "세트 휴식 초시계" else "세트 간 휴식 중",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                            val rMin = restTimerState.remainingSeconds / 60
+                                            val rSec = restTimerState.remainingSeconds % 60
+                                            Text(
+                                                text = "%02d:%02d".format(rMin, rSec),
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (!restTimerState.isStopwatch) {
+                                            FilledTonalButton(
+                                                onClick = { restTimerManager.addSeconds(30) },
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("+30초", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        IconButton(onClick = { restTimerManager.togglePauseResume() }) {
+                                            Icon(
+                                                imageVector = if (restTimerState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                                contentDescription = "Pause/Resume",
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                        IconButton(onClick = { restTimerManager.stopTimer() }) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Close Timer",
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "휴식 타이머:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                listOf(60, 90, 120).forEach { sec ->
+                                    SuggestionChip(
+                                        onClick = { restTimerManager.startTimer(sec) },
+                                        label = { Text("${sec}초", fontWeight = FontWeight.Medium) },
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                }
+                                SuggestionChip(
+                                    onClick = { restTimerManager.startStopwatch() },
+                                    label = { Text("스톱워치", fontWeight = FontWeight.Medium) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🏋️ [Zone 2: 중단 운동 정보 & 관리 영역 (Workout Content Zone)]
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -254,61 +337,57 @@ fun WorkoutSessionDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "진행 중인 세션",
+                                    text = "운동 세션 정보",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "총 ${sets.size}세트 완료",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    text = sessionTitle,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "종목 ${groupedSets.keys.size}개 · 총 ${sets.size}세트 기록됨",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
-                            Button(
-                                onClick = { showFinishWorkoutDialog = true },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondary
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("운동 완료")
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                IconButton(onClick = {
+                                    editedTitle = sessionTitle
+                                    showEditDialog = true
+                                }) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "세션명 수정",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(onClick = { showDeleteDialog = true }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "세션 삭제",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Quick Rest Timer Launchers
-                        Row(
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { showExerciseSelection = true },
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(
-                                text = "휴식 타이머:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            listOf(60, 90, 120).forEach { sec ->
-                                SuggestionChip(
-                                    onClick = { restTimerManager.startTimer(sec) },
-                                    label = { Text("${sec}초") },
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                            SuggestionChip(
-                                onClick = { restTimerManager.startStopwatch() },
-                                label = { Text("스톱워치") },
-                                shape = RoundedCornerShape(8.dp)
-                            )
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("운동 종목 추가", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
