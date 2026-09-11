@@ -71,9 +71,12 @@ interface AppContainer {
     
     val statisticsRepository: com.example.domain.repository.StatisticsRepository
     val dataExporter: com.example.domain.repository.DataExporter
+    val dataImporter: com.example.domain.repository.DataImporter
     val calculateWorkoutVolumeUseCase: com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase
     val calculatePersonalRecordsUseCase: com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase
     val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase
+    val importWorkoutDataUseCase: com.example.application.usecase.statistics.ImportWorkoutDataUseCase
+    val calculateOneRepMaxUseCase: com.example.application.usecase.statistics.CalculateOneRepMaxUseCase
 
     val restTimerManager: RestTimerManager
 }
@@ -203,6 +206,9 @@ class DefaultAppContainer(
     override val dataExporter: com.example.domain.repository.DataExporter by lazy {
         com.example.infrastructure.export.DataExporterImpl(database.workoutSessionDao(), database.exerciseSetDao(), ioDispatcher)
     }
+    override val dataImporter: com.example.domain.repository.DataImporter by lazy {
+        com.example.infrastructure.export.DataImporterImpl(database.workoutSessionDao(), database.exerciseSetDao(), ioDispatcher)
+    }
     override val calculateWorkoutVolumeUseCase: com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase by lazy {
         com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase(statisticsRepository)
     }
@@ -211,6 +217,12 @@ class DefaultAppContainer(
     }
     override val exportWorkoutDataUseCase: com.example.application.usecase.statistics.ExportWorkoutDataUseCase by lazy {
         com.example.application.usecase.statistics.ExportWorkoutDataUseCase(dataExporter)
+    }
+    override val importWorkoutDataUseCase: com.example.application.usecase.statistics.ImportWorkoutDataUseCase by lazy {
+        com.example.application.usecase.statistics.ImportWorkoutDataUseCase(dataImporter)
+    }
+    override val calculateOneRepMaxUseCase: com.example.application.usecase.statistics.CalculateOneRepMaxUseCase by lazy {
+        com.example.application.usecase.statistics.CalculateOneRepMaxUseCase()
     }
 
     override val restTimerManager: RestTimerManager by lazy {

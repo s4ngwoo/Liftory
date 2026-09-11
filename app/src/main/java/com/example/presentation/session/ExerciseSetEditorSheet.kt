@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.application.usecase.statistics.CalculateOneRepMaxUseCase
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +34,10 @@ fun ExerciseSetEditorSheet(
     onSaveSet: (weight: Double, reps: Int, rpe: Double?) -> Unit,
     exerciseName: String = "Exercise",
     setNumber: Int = 1,
-    lastSetSummary: String? = null
+    lastSetSummary: String? = null,
+    lastWeight: Double? = null,
+    lastReps: Int? = null,
+    lastRpe: Double? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -48,6 +53,9 @@ fun ExerciseSetEditorSheet(
             exerciseName = exerciseName,
             setNumber = setNumber,
             lastSetSummary = lastSetSummary,
+            lastWeight = lastWeight,
+            lastReps = lastReps,
+            lastRpe = lastRpe,
             onClose = onDismissRequest
         )
     }
@@ -59,11 +67,16 @@ fun ExerciseSetEditorContent(
     exerciseName: String = "Exercise",
     setNumber: Int = 1,
     lastSetSummary: String? = null,
+    lastWeight: Double? = null,
+    lastReps: Int? = null,
+    lastRpe: Double? = null,
     onClose: (() -> Unit)? = null
 ) {
     var weightInput by remember { mutableStateOf("") }
     var repsInput by remember { mutableStateOf("") }
     var rpeInput by remember { mutableStateOf("") }
+
+    val calculateOneRepMaxUseCase = remember { CalculateOneRepMaxUseCase() }
 
     val weightFocusRequester = remember { FocusRequester() }
     val repsFocusRequester = remember { FocusRequester() }
@@ -74,6 +87,18 @@ fun ExerciseSetEditorContent(
         val reps = repsInput.toIntOrNull() ?: 0
         val rpe = rpeInput.toDoubleOrNull()
         onSaveSet(weight, reps, rpe)
+    }
+
+    val ghostWeight = lastWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "0.0"
+    val ghostReps = lastReps?.toString() ?: "0"
+    val ghostRpe = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "8.0"
+
+    // Calculate live 1RM estimate
+    val liveWeight = weightInput.toDoubleOrNull() ?: 0.0
+    val liveReps = repsInput.toIntOrNull() ?: 0
+    val liveRpe = rpeInput.toDoubleOrNull()
+    val liveOneRm = remember(weightInput, repsInput, rpeInput) {
+        calculateOneRepMaxUseCase(liveWeight, liveReps, liveRpe)
     }
 
     LaunchedEffect(Unit) {
@@ -133,29 +158,58 @@ fun ExerciseSetEditorContent(
             }
         }
 
-        // Previous Set Reference Banner (if available)
+        // Previous Set Reference Banner (with 1-touch copy button)
         if (lastSetSummary != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "이전 세트: ",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = lastSetSummary,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "이전 세트: ",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = lastSetSummary,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                if (lastWeight != null && lastReps != null) {
+                    AssistChip(
+                        onClick = {
+                            weightInput = if (lastWeight % 1.0 == 0.0) "${lastWeight.toInt()}" else "$lastWeight"
+                            repsInput = "$lastReps"
+                            rpeInput = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: ""
+                        },
+                        label = { Text("이전 세트 복사", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        modifier = Modifier.height(30.dp)
+                    )
+                }
             }
         }
 
@@ -188,12 +242,12 @@ fun ExerciseSetEditorContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 1. Weight (kg) - Auto focused!
+            // 1. Weight (kg) - Auto focused with ghost placeholder!
             OutlinedTextField(
                 value = weightInput,
                 onValueChange = { weightInput = it },
                 label = { Text("무게(kg)") },
-                placeholder = { Text("0.0") },
+                placeholder = { Text(ghostWeight) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,
@@ -208,12 +262,12 @@ fun ExerciseSetEditorContent(
                     .testTag("input_weight")
             )
 
-            // 2. Reps
+            // 2. Reps with ghost placeholder!
             OutlinedTextField(
                 value = repsInput,
                 onValueChange = { repsInput = it },
                 label = { Text("횟수") },
-                placeholder = { Text("0") },
+                placeholder = { Text(ghostReps) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
@@ -228,12 +282,12 @@ fun ExerciseSetEditorContent(
                     .testTag("input_reps")
             )
 
-            // 3. RPE (Optional)
+            // 3. RPE (Optional) with ghost placeholder!
             OutlinedTextField(
                 value = rpeInput,
                 onValueChange = { rpeInput = it },
                 label = { Text("RPE") },
-                placeholder = { Text("8.0") },
+                placeholder = { Text(ghostRpe) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,
@@ -249,9 +303,44 @@ fun ExerciseSetEditorContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Live estimated 1RM feedback badge
+        if (liveOneRm > 0.0) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "🔥 예상 1RM",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (liveRpe != null) "(RPE $liveRpe 반영)" else "(Epley 공식)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = "$liveOneRm kg",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
-        // Save Set Action Button (positioned directly beneath the compact inputs)
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Save Set Action Button (positioned directly beneath the inputs)
         Button(
             onClick = { performSave() },
             modifier = Modifier

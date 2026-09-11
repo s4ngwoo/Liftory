@@ -167,7 +167,8 @@ fun MainScreen(
                             return StatisticsViewModel(
                                 appContainer.calculateWorkoutVolumeUseCase,
                                 appContainer.calculatePersonalRecordsUseCase,
-                                appContainer.exportWorkoutDataUseCase
+                                appContainer.exportWorkoutDataUseCase,
+                                appContainer.importWorkoutDataUseCase
                             ) as T
                         }
                     }

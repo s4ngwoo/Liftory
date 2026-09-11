@@ -19,6 +19,9 @@
 - 실시간 누적 운동 시간 타이머(`⏱️ 00:23:45`) 및 세션 완료 다이얼로그.
 - 세트 저장 시 자동 시작되는 실시간 휴식 초시계(+30초, 일시정지, 스톱워치 모드) 도킹 바.
 - `SessionNotesManager` 기반 종목별 평가/피드백 코멘트 작성 및 저장 기능.
+- Epley 공식 및 RPE/RIR 조정을 반영한 실시간 추정 1RM 계산(`CalculateOneRepMaxUseCase`) 및 세트 입력창 내 실시간 `🔥 예상 1RM` 배지 피드백.
+- 세트 입력창 이전 세트 무게/횟수 원터치 자동 완성(`[↺ 이전 세트 복사]`) 버튼 및 연한 고스트 플레이스홀더 안내.
+- JSON 및 CSV 백업 데이터 가져오기 및 Room DB 복원(`ImportWorkoutDataUseCase` & `DataImporterImpl`) 지원 및 통계 화면 UI 연동.
 - `GEMINI.md` 및 `.agents/rules/`에 클린 아키텍처 및 TDD 에이전트 규칙 공식 추가.
 
 ### 수정됨 (Fixed)

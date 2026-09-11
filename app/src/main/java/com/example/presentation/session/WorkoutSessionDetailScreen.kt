@@ -400,6 +400,9 @@ fun WorkoutSessionDetailScreen(
             exerciseName = exerciseName,
             setNumber = existingSets.size + 1,
             lastSetSummary = lastSummary,
+            lastWeight = lastSet?.weight,
+            lastReps = lastSet?.reps,
+            lastRpe = lastSet?.rpe,
             onDismissRequest = { showEditorSheet = false },
             onSaveSet = { weight, reps, rpe ->
                 selectedExerciseId?.let { viewModel.addSet(it, weight, reps, rpe) }

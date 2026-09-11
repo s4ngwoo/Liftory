@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.application.usecase.statistics.CalculatePersonalRecordsUseCase
 import com.example.application.usecase.statistics.CalculateWorkoutVolumeUseCase
 import com.example.application.usecase.statistics.ExportWorkoutDataUseCase
+import com.example.application.usecase.statistics.ImportWorkoutDataUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -13,7 +14,8 @@ import java.util.Calendar
 class StatisticsViewModel(
     calculateWorkoutVolumeUseCase: CalculateWorkoutVolumeUseCase,
     calculatePersonalRecordsUseCase: CalculatePersonalRecordsUseCase,
-    private val exportWorkoutDataUseCase: ExportWorkoutDataUseCase
+    private val exportWorkoutDataUseCase: ExportWorkoutDataUseCase,
+    private val importWorkoutDataUseCase: ImportWorkoutDataUseCase
 ) : ViewModel() {
 
     private val thirtyDaysAgo = Calendar.getInstance().apply {
@@ -45,6 +47,20 @@ class StatisticsViewModel(
     fun exportAsCsv(onResult: (Result<String>) -> Unit) {
         viewModelScope.launch {
             val result = exportWorkoutDataUseCase.exportAsCsv()
+            onResult(result)
+        }
+    }
+
+    fun importFromJson(jsonString: String, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch {
+            val result = importWorkoutDataUseCase.importFromJson(jsonString)
+            onResult(result)
+        }
+    }
+
+    fun importFromCsv(csvString: String, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch {
+            val result = importWorkoutDataUseCase.importFromCsv(csvString)
             onResult(result)
         }
     }
