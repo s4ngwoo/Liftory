@@ -70,9 +70,9 @@ abstract class StrengthLogDatabase : RoomDatabase() {
 
         suspend fun seedDefaultsIfEmpty(database: StrengthLogDatabase) {
             val exerciseDao = database.exerciseDao()
-            if (exerciseDao.getCount() == 0) {
-                populateDefaultExercises(exerciseDao)
-            }
+            // Always call populateDefaultExercises - uses OnConflictStrategy.IGNORE so existing data is preserved,
+            // while any newly introduced default exercises (e.g. cardio exercises) are safely inserted!
+            populateDefaultExercises(exerciseDao)
             val routineDao = database.routineTemplateDao()
             if (routineDao.getById("routine_push") == null) {
                 populateDefaultRoutines(routineDao)
@@ -93,7 +93,14 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                 ExerciseEntity("ex_leg_press", "Leg Press (레그 프레스)", false, "Legs", "MACHINE", "Hammer Strength", now, now),
                 ExerciseEntity("ex_lateral_raise", "Lateral Raise (사이드 레터럴 레이즈)", false, "Shoulders", "FREE_WEIGHT", null, now, now),
                 ExerciseEntity("ex_bicep_curl", "Bicep Curl (덤벨 컬)", false, "Arms", "FREE_WEIGHT", null, now, now),
-                ExerciseEntity("ex_tricep_pushdown", "Tricep Pushdown (트라이셉 푸시다운)", false, "Arms", "MACHINE", "Cybex", now, now)
+                ExerciseEntity("ex_tricep_pushdown", "Tricep Pushdown (트라이셉 푸시다운)", false, "Arms", "MACHINE", "Cybex", now, now),
+                // Cardio Exercises (유산소 운동)
+                ExerciseEntity("ex_treadmill", "Treadmill (러닝머신)", false, "Cardio", "CARDIO", "DRAX", now, now),
+                ExerciseEntity("ex_stairmaster", "StairMaster (천국의 계단 / 스텝밀)", false, "Cardio", "CARDIO", "Matrix", now, now),
+                ExerciseEntity("ex_cycle", "Stationary Cycle (실내 사이클)", false, "Cardio", "CARDIO", "Concept2", now, now),
+                ExerciseEntity("ex_incline_treadmill", "Incline Treadmill (마이마운틴 / 인클라인 러닝)", false, "Cardio", "CARDIO", "MyMountain", now, now),
+                ExerciseEntity("ex_elliptical", "Elliptical (일립티컬)", false, "Cardio", "CARDIO", "Life Fitness", now, now),
+                ExerciseEntity("ex_rowing_machine", "Rowing Machine (로잉머신)", false, "Cardio", "CARDIO", "Concept2", now, now)
             )
             dao.insertAll(defaults)
         }

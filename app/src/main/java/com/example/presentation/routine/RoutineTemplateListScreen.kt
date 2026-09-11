@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -349,20 +350,36 @@ fun RoutineTemplateCard(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
+                                val isCardio = exercise?.isCardio == true
+                                val badgeColor = when {
+                                    isCardio -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    isMachine -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                                    else -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                }
+                                val badgeContentColor = when {
+                                    isCardio -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    isMachine -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                }
+                                val badgeText = when {
+                                    isCardio -> "🏃 유산소"
+                                    isMachine -> if (!brand.isNullOrBlank()) "⚙️ $brand" else "⚙️ 머신"
+                                    else -> "🏋️ 프리"
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                    color = badgeColor
                                 ) {
                                     Text(
-                                        text = if (isMachine) (if (!brand.isNullOrBlank()) "⚙️ $brand" else "⚙️ 머신") else "🏋️ 프리",
+                                        text = badgeText,
                                         style = MaterialTheme.typography.labelSmall,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                        color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                        color = badgeContentColor
                                     )
                                 }
                             }
                             Text(
-                                text = "${preset.defaultWeight}kg × ${preset.defaultReps}회",
+                                text = if (exercise?.isCardio == true) "속도 ${preset.defaultWeight} · ${preset.defaultReps}분" else "${preset.defaultWeight}kg × ${preset.defaultReps}회",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -511,16 +528,32 @@ fun RoutineEditorDialog(
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
+                                        val isCardio = exercise?.isCardio == true
                                         val isMachine = exercise?.equipmentType == EquipmentType.MACHINE
+                                        val badgeColor = when {
+                                            isCardio -> MaterialTheme.colorScheme.primaryContainer
+                                            isMachine -> MaterialTheme.colorScheme.tertiaryContainer
+                                            else -> MaterialTheme.colorScheme.secondaryContainer
+                                        }
+                                        val badgeContentColor = when {
+                                            isCardio -> MaterialTheme.colorScheme.onPrimaryContainer
+                                            isMachine -> MaterialTheme.colorScheme.onTertiaryContainer
+                                            else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                        }
+                                        val badgeText = when {
+                                            isCardio -> "🏃 유산소"
+                                            isMachine -> "⚙️ 머신"
+                                            else -> "🏋️ 프리"
+                                        }
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
-                                            color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                            color = badgeColor
                                         ) {
                                             Text(
-                                                text = if (isMachine) "⚙️ 머신" else "🏋️ 프리",
+                                                text = badgeText,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                                color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                                color = badgeContentColor
                                             )
                                         }
                                     }
@@ -665,25 +698,38 @@ fun RoutineExercisePickerDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    FilterChip(
-                        selected = selectedFilter == null,
-                        onClick = { selectedFilter = null },
-                        label = { Text("전체") }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == EquipmentType.FREE_WEIGHT,
-                        onClick = { selectedFilter = EquipmentType.FREE_WEIGHT },
-                        label = { Text("🏋️ 프리웨이트") }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == EquipmentType.MACHINE,
-                        onClick = { selectedFilter = EquipmentType.MACHINE },
-                        label = { Text("⚙️ 머신운동") }
-                    )
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == null,
+                            onClick = { selectedFilter = null },
+                            label = { Text("전체") }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == EquipmentType.FREE_WEIGHT,
+                            onClick = { selectedFilter = EquipmentType.FREE_WEIGHT },
+                            label = { Text("🏋️ 프리웨이트") }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == EquipmentType.MACHINE,
+                            onClick = { selectedFilter = EquipmentType.MACHINE },
+                            label = { Text("⚙️ 머신") }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == EquipmentType.CARDIO,
+                            onClick = { selectedFilter = EquipmentType.CARDIO },
+                            label = { Text("🏃 유산소") }
+                        )
+                    }
                 }
 
                 LazyColumn(
@@ -733,15 +779,30 @@ fun RoutineExercisePickerDialog(
                                     }
                                 }
 
+                                val badgeText = when (exercise.equipmentType) {
+                                    EquipmentType.CARDIO -> "🏃 유산소"
+                                    EquipmentType.MACHINE -> "⚙️ 머신"
+                                    EquipmentType.FREE_WEIGHT -> "🏋️ 프리"
+                                }
+                                val badgeContainer = when (exercise.equipmentType) {
+                                    EquipmentType.CARDIO -> MaterialTheme.colorScheme.primaryContainer
+                                    EquipmentType.MACHINE -> MaterialTheme.colorScheme.tertiaryContainer
+                                    EquipmentType.FREE_WEIGHT -> MaterialTheme.colorScheme.secondaryContainer
+                                }
+                                val badgeContent = when (exercise.equipmentType) {
+                                    EquipmentType.CARDIO -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    EquipmentType.MACHINE -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    EquipmentType.FREE_WEIGHT -> MaterialTheme.colorScheme.onSecondaryContainer
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = if (isMachine) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                    color = badgeContainer
                                 ) {
                                     Text(
-                                        text = if (isMachine) "⚙️ 머신" else "🏋️ 프리",
+                                        text = badgeText,
                                         style = MaterialTheme.typography.labelSmall,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        color = if (isMachine) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                        color = badgeContent
                                     )
                                 }
                             }

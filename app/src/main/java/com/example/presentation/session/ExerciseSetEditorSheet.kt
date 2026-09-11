@@ -37,6 +37,7 @@ fun ExerciseSetEditorSheet(
     onSaveSet: (weight: Double, reps: Int, rpe: Double?) -> Unit,
     exerciseName: String = "Exercise",
     setNumber: Int = 1,
+    isCardio: Boolean = false,
     lastSetSummary: String? = null,
     lastWeight: Double? = null,
     lastReps: Int? = null,
@@ -59,6 +60,7 @@ fun ExerciseSetEditorSheet(
             onSaveSet = onSaveSet,
             exerciseName = exerciseName,
             setNumber = setNumber,
+            isCardio = isCardio,
             lastSetSummary = lastSetSummary,
             lastWeight = lastWeight,
             lastReps = lastReps,
@@ -77,6 +79,7 @@ fun ExerciseSetEditorContent(
     onSaveSet: (weight: Double, reps: Int, rpe: Double?) -> Unit,
     exerciseName: String = "Exercise",
     setNumber: Int = 1,
+    isCardio: Boolean = false,
     lastSetSummary: String? = null,
     lastWeight: Double? = null,
     lastReps: Int? = null,
@@ -105,11 +108,11 @@ fun ExerciseSetEditorContent(
     }
 
     val ghostWeight = lastWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" }
-        ?: lastSessionWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "0.0"
+        ?: lastSessionWeight?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: (if (isCardio) "6.0" else "0.0")
     val ghostReps = lastReps?.toString()
-        ?: lastSessionReps?.toString() ?: "0"
+        ?: lastSessionReps?.toString() ?: (if (isCardio) "20" else "0")
     val ghostRpe = lastRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" }
-        ?: lastSessionRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "8.0"
+        ?: lastSessionRpe?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "$it" } ?: "7.0"
 
     // Calculate live 1RM estimate
     val liveWeight = weightInput.toDoubleOrNull() ?: 0.0
@@ -286,38 +289,52 @@ fun ExerciseSetEditorContent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Quick weight delta buttons
+        // Quick delta buttons (weight delta or time delta for cardio)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("+2.5", "+5.0", "+10.0").forEach { delta ->
-                AssistChip(
-                    onClick = {
-                        val current = weightInput.toDoubleOrNull() ?: 0.0
-                        val add = delta.toDouble()
-                        weightInput = "%.1f".format(current + add).trimEnd('0').trimEnd('.')
-                    },
-                    label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
-                    modifier = Modifier.weight(1f)
-                )
+            if (isCardio) {
+                listOf("+5분", "+10분", "+15분").forEach { delta ->
+                    val min = delta.removeSuffix("분").toInt()
+                    AssistChip(
+                        onClick = {
+                            val current = repsInput.toIntOrNull() ?: 0
+                            repsInput = "${current + min}"
+                        },
+                        label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                listOf("+2.5", "+5.0", "+10.0").forEach { delta ->
+                    AssistChip(
+                        onClick = {
+                            val current = weightInput.toDoubleOrNull() ?: 0.0
+                            val add = delta.toDouble()
+                            weightInput = "%.1f".format(current + add).trimEnd('0').trimEnd('.')
+                        },
+                        label = { Text(delta, style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // Compact Horizontal Row for 3 Inputs:
-        // Weight (40%) | Reps (30%) | RPE (30%)
+        // Weight/Speed (40%) | Reps/Time (30%) | RPE (30%)
         // Height is only ~64dp, ensuring 100% full visibility above the keyboard!
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 1. Weight (kg) - Auto focused with ghost placeholder!
+            // 1. Weight or Speed/Level - Auto focused with ghost placeholder!
             OutlinedTextField(
                 value = weightInput,
                 onValueChange = { weightInput = it },
-                label = { Text("무게(kg)") },
+                label = { Text(if (isCardio) "속도/레벨" else "무게(kg)") },
                 placeholder = { Text(ghostWeight) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -333,11 +350,11 @@ fun ExerciseSetEditorContent(
                     .testTag("input_weight")
             )
 
-            // 2. Reps with ghost placeholder!
+            // 2. Reps or Minutes with ghost placeholder!
             OutlinedTextField(
                 value = repsInput,
                 onValueChange = { repsInput = it },
-                label = { Text("횟수") },
+                label = { Text(if (isCardio) "시간(분)" else "횟수") },
                 placeholder = { Text(ghostReps) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -374,8 +391,8 @@ fun ExerciseSetEditorContent(
             )
         }
 
-        // Live estimated 1RM feedback badge
-        if (liveOneRm > 0.0) {
+        // Live estimated 1RM feedback badge (strength only)
+        if (!isCardio && liveOneRm > 0.0) {
             Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier

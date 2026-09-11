@@ -432,9 +432,13 @@ fun WorkoutSessionDetailScreen(
                             exerciseId
                         )
 
+                        val exercise = exercises.find { it.id == exerciseId }
+                        val isCardio = exercise?.isCardio == true
+
                         ExerciseGroupCard(
                             exerciseId = exerciseId,
                             exerciseName = exerciseName,
+                            isCardio = isCardio,
                             sets = exerciseSets,
                             comment = exerciseComment,
                             lastHistory = exerciseHistoryMap[exerciseId],
@@ -469,11 +473,17 @@ fun WorkoutSessionDetailScreen(
     }
 
     if (showEditorSheet) {
-        val exerciseName = exercises.find { it.id == selectedExerciseId }?.name ?: "Exercise"
+        val selectedExercise = exercises.find { it.id == selectedExerciseId }
+        val exerciseName = selectedExercise?.name ?: "Exercise"
+        val isCardio = selectedExercise?.isCardio == true
         val existingSets = sets.filter { it.exerciseId == selectedExerciseId }
         val lastSet = existingSets.lastOrNull()
         val lastSummary = if (lastSet != null) {
-            "${lastSet.weight} kg × ${lastSet.reps}회" + if (lastSet.rpe != null) " (RPE ${lastSet.rpe})" else ""
+            if (isCardio) {
+                "${lastSet.weight} · ${lastSet.reps}분" + if (lastSet.rpe != null) " (RPE ${lastSet.rpe})" else ""
+            } else {
+                "${lastSet.weight} kg × ${lastSet.reps}회" + if (lastSet.rpe != null) " (RPE ${lastSet.rpe})" else ""
+            }
         } else null
 
         val currentSetNum = existingSets.size + 1
@@ -483,6 +493,7 @@ fun WorkoutSessionDetailScreen(
         ExerciseSetEditorSheet(
             exerciseName = exerciseName,
             setNumber = currentSetNum,
+            isCardio = isCardio,
             lastSetSummary = lastSummary,
             lastWeight = lastSet?.weight,
             lastReps = lastSet?.reps,
@@ -609,6 +620,7 @@ fun ExerciseGroupCard(
     exerciseName: String,
     sets: List<ExerciseSet>,
     comment: String,
+    isCardio: Boolean = false,
     lastHistory: ExerciseHistoryRecord? = null,
     onSaveComment: (String) -> Unit
 ) {
@@ -679,12 +691,17 @@ fun ExerciseGroupCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             lastHistory.sets.forEach { prevSet ->
+                                val setDesc = if (isCardio) {
+                                    "${prevSet.setNumber}세트 ${prevSet.weight}·${prevSet.reps}분"
+                                } else {
+                                    "${prevSet.setNumber}세트 ${prevSet.weight}kg×${prevSet.reps}"
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
                                 ) {
                                     Text(
-                                        text = "${prevSet.setNumber}세트 ${prevSet.weight}kg×${prevSet.reps}" + if (prevSet.rpe != null) " (RPE ${prevSet.rpe})" else "",
+                                        text = setDesc + if (prevSet.rpe != null) " (RPE ${prevSet.rpe})" else "",
                                         style = MaterialTheme.typography.labelSmall,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                                         fontWeight = FontWeight.Medium,
@@ -705,8 +722,8 @@ fun ExerciseGroupCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                Text("Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                Text("Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                Text(if (isCardio) "속도/레벨" else "Weight", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
+                Text(if (isCardio) "시간(분)" else "Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
                 Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
             }
 
@@ -729,13 +746,17 @@ fun ExerciseGroupCard(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "${set.weight} kg",
+                        text = if (isCardio) {
+                            if (set.weight % 1.0 == 0.0) "${set.weight.toInt()}" else "${set.weight}"
+                        } else {
+                            "${set.weight} kg"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1.2f)
                     )
                     Text(
-                        text = "${set.reps}",
+                        text = if (isCardio) "${set.reps}분" else "${set.reps}",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )

@@ -2,11 +2,12 @@ package com.example.domain.model
 
 enum class EquipmentType {
     FREE_WEIGHT, // 프리웨이트 (바벨, 덤벨, 맨몸 등)
-    MACHINE      // 머신운동 (핀로드, 플레이트 로드 등)
+    MACHINE,     // 머신운동 (핀로드, 플레이트 로드 등)
+    CARDIO       // 유산소 (러닝머신, 천국의 계단, 사이클 등)
 }
 
 /**
- * Represents a strength training exercise (e.g., Squat, Bench Press, Lat Pulldown).
+ * Represents an exercise (Strength training or Cardio).
  */
 data class Exercise(
     val id: String,
@@ -17,4 +18,8 @@ data class Exercise(
     val machineBrand: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
-)
+) {
+    val isCardio: Boolean
+        get() = equipmentType == EquipmentType.CARDIO || muscleGroup.equals("Cardio", ignoreCase = true)
+}
+

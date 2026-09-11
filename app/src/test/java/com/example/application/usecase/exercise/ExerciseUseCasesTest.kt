@@ -104,4 +104,26 @@ class ExerciseUseCasesTest {
         assertEquals(com.example.domain.model.EquipmentType.MACHINE, created.equipmentType)
         assertEquals("Hammer Strength", created.machineBrand)
     }
+
+    @Test
+    fun `createExerciseUseCase should create cardio exercise and check isCardio helper`() = runTest {
+        val result = createUseCase(
+            name = "StairMaster (천국의 계단)",
+            muscleGroup = "Cardio",
+            equipmentType = com.example.domain.model.EquipmentType.CARDIO,
+            machineBrand = "Matrix"
+        )
+        assertTrue(result.isSuccess)
+
+        val created = result.getOrNull()!!
+        assertEquals("StairMaster (천국의 계단)", created.name)
+        assertEquals(com.example.domain.model.EquipmentType.CARDIO, created.equipmentType)
+        assertEquals("Matrix", created.machineBrand)
+        assertTrue(created.isCardio)
+
+        val searchResult = searchUseCase("천국의 계단").first()
+        assertEquals(1, searchResult.size)
+        assertEquals("StairMaster (천국의 계단)", searchResult.first().name)
+    }
 }
+

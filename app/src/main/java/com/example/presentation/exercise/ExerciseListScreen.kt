@@ -41,7 +41,8 @@ fun ExerciseListScreen(
         "Back" to "등",
         "Legs" to "하체",
         "Shoulders" to "어깨",
-        "Arms" to "팔"
+        "Arms" to "팔",
+        "Cardio" to "🏃 유산소"
     )
 
     val filteredExercises = remember(exercises, searchQuery, selectedCategory, selectedEquipmentFilter) {
@@ -90,31 +91,41 @@ fun ExerciseListScreen(
                 singleLine = true
             )
 
-            // Equipment Type Tabs (Free Weight vs Machine)
-            Row(
+            // Equipment Type Tabs (Free Weight vs Machine vs Cardio)
+            LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(
-                    selected = selectedEquipmentFilter == null,
-                    onClick = { selectedEquipmentFilter = null },
-                    label = { Text("전체 기구") },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = selectedEquipmentFilter == EquipmentType.FREE_WEIGHT,
-                    onClick = { selectedEquipmentFilter = EquipmentType.FREE_WEIGHT },
-                    label = { Text("🏋️ 프리웨이트") },
-                    modifier = Modifier.weight(1.3f)
-                )
-                FilterChip(
-                    selected = selectedEquipmentFilter == EquipmentType.MACHINE,
-                    onClick = { selectedEquipmentFilter = EquipmentType.MACHINE },
-                    label = { Text("⚙️ 머신운동") },
-                    modifier = Modifier.weight(1.2f)
-                )
+                item {
+                    FilterChip(
+                        selected = selectedEquipmentFilter == null,
+                        onClick = { selectedEquipmentFilter = null },
+                        label = { Text("전체 기구") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedEquipmentFilter == EquipmentType.FREE_WEIGHT,
+                        onClick = { selectedEquipmentFilter = EquipmentType.FREE_WEIGHT },
+                        label = { Text("🏋️ 프리웨이트") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedEquipmentFilter == EquipmentType.MACHINE,
+                        onClick = { selectedEquipmentFilter = EquipmentType.MACHINE },
+                        label = { Text("⚙️ 머신운동") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedEquipmentFilter == EquipmentType.CARDIO,
+                        onClick = { selectedEquipmentFilter = EquipmentType.CARDIO },
+                        label = { Text("🏃 유산소") }
+                    )
+                }
             }
 
             // Category filter chips (Body Parts)
@@ -210,16 +221,17 @@ fun ExerciseListScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("타겟 부위: ${exercise.muscleGroup}", style = MaterialTheme.typography.bodyMedium)
-                    val typeStr = if (exercise.equipmentType == EquipmentType.MACHINE) {
-                        "⚙️ 머신운동" + if (!exercise.machineBrand.isNullOrBlank()) " (${exercise.machineBrand})" else ""
-                    } else {
-                        "🏋️ 프리웨이트"
+                    val typeStr = when (exercise.equipmentType) {
+                        EquipmentType.CARDIO -> "🏃 유산소" + if (!exercise.machineBrand.isNullOrBlank()) " (${exercise.machineBrand})" else ""
+                        EquipmentType.MACHINE -> "⚙️ 머신운동" + if (!exercise.machineBrand.isNullOrBlank()) " (${exercise.machineBrand})" else ""
+                        EquipmentType.FREE_WEIGHT -> "🏋️ 프리웨이트"
                     }
                     Text("운동 유형: $typeStr", style = MaterialTheme.typography.bodyMedium)
                     Text("등록 유형: ${if (exercise.isCustom) "사용자 정의 종목" else "기본 제공 종목"}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "세션 화면에서 '+' 버튼을 눌러 이 운동의 무게와 횟수를 기록할 수 있습니다.",
+                        if (exercise.isCardio) "세션 화면에서 '+' 버튼을 눌러 이 운동의 속도/레벨과 시간을 기록할 수 있습니다."
+                        else "세션 화면에서 '+' 버튼을 눌러 이 운동의 무게와 횟수를 기록할 수 있습니다.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -267,21 +279,33 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit = {}) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                    if (exercise.equipmentType == EquipmentType.MACHINE) {
-                        val brandLabel = if (!exercise.machineBrand.isNullOrBlank()) "머신 (${exercise.machineBrand})" else "머신"
-                        Text(
-                            text = brandLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    } else {
-                        Text(
-                            text = "프리웨이트",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    when (exercise.equipmentType) {
+                        EquipmentType.CARDIO -> {
+                            val brandLabel = if (!exercise.machineBrand.isNullOrBlank()) "유산소 (${exercise.machineBrand})" else "유산소"
+                            Text(
+                                text = brandLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        EquipmentType.MACHINE -> {
+                            val brandLabel = if (!exercise.machineBrand.isNullOrBlank()) "머신 (${exercise.machineBrand})" else "머신"
+                            Text(
+                                text = brandLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        EquipmentType.FREE_WEIGHT -> {
+                            Text(
+                                text = "프리웨이트",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -311,10 +335,12 @@ fun AddExerciseDialog(
         "Legs" to "하체",
         "Shoulders" to "어깨",
         "Arms" to "팔",
-        "Core" to "복근"
+        "Core" to "복근",
+        "Cardio" to "유산소"
     )
 
-    val popularBrands = listOf("Hammer Strength", "Cybex", "Life Fitness", "Newtech", "Arsenal", "Panatta")
+    val popularMachineBrands = listOf("Hammer Strength", "Cybex", "Life Fitness", "Newtech", "Arsenal", "Panatta")
+    val popularCardioBrands = listOf("DRAX", "Matrix", "Concept2", "Life Fitness", "Technogym", "MyMountain")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -324,16 +350,16 @@ fun AddExerciseDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("운동 이름 (예: 체스트 프레스)") },
+                    label = { Text("운동 이름 (예: 체스트 프레스, 러닝머신)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Equipment Type Selection (Free Weight vs Machine)
+                // Equipment Type Selection (Free Weight vs Machine vs Cardio)
                 Text("기구 구분:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     FilterChip(
                         selected = selectedEquipment == EquipmentType.FREE_WEIGHT,
@@ -344,25 +370,35 @@ fun AddExerciseDialog(
                     FilterChip(
                         selected = selectedEquipment == EquipmentType.MACHINE,
                         onClick = { selectedEquipment = EquipmentType.MACHINE },
-                        label = { Text("⚙️ 머신운동") },
+                        label = { Text("⚙️ 머신") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = selectedEquipment == EquipmentType.CARDIO,
+                        onClick = { 
+                            selectedEquipment = EquipmentType.CARDIO
+                            selectedGroup = "Cardio"
+                        },
+                        label = { Text("🏃 유산소") },
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // If Machine is selected, show Machine Brand input & suggestions
-                if (selectedEquipment == EquipmentType.MACHINE) {
+                // If Machine or Cardio is selected, show Brand input & suggestions
+                if (selectedEquipment == EquipmentType.MACHINE || selectedEquipment == EquipmentType.CARDIO) {
+                    val brands = if (selectedEquipment == EquipmentType.CARDIO) popularCardioBrands else popularMachineBrands
                     OutlinedTextField(
                         value = machineBrand,
                         onValueChange = { machineBrand = it },
-                        label = { Text("머신 브랜드 / 제조사 (선택)") },
-                        placeholder = { Text("예: Hammer Strength") },
+                        label = { Text("브랜드 / 제조사 (선택)") },
+                        placeholder = { Text(if (selectedEquipment == EquipmentType.CARDIO) "예: DRAX, Matrix" else "예: Hammer Strength") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(popularBrands) { brand ->
+                        items(brands) { brand ->
                             SuggestionChip(
                                 onClick = { machineBrand = brand },
                                 label = { Text(brand, style = MaterialTheme.typography.labelSmall) }
@@ -393,7 +429,7 @@ fun AddExerciseDialog(
                         name,
                         selectedGroup,
                         selectedEquipment,
-                        if (selectedEquipment == EquipmentType.MACHINE) machineBrand.trim().ifBlank { null } else null
+                        if (selectedEquipment != EquipmentType.FREE_WEIGHT) machineBrand.trim().ifBlank { null } else null
                     ) 
                 },
                 enabled = name.isNotBlank()
