@@ -51,16 +51,18 @@ fun WorkoutSessionListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    viewModel.createNewSession("Workout Session") { sessionId ->
-                        onNavigateToDetail(sessionId)
-                    }
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Session")
+            if (sessions.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.createNewSession("Workout Session") { sessionId ->
+                            onNavigateToDetail(sessionId)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Create Session")
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
