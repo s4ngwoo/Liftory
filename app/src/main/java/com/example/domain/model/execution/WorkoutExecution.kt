@@ -39,7 +39,10 @@ data class ConfirmedSetRecord(
     val performedDurationSeconds: Int,
     val startedAtEpochMs: Long,
     val completedAtEpochMs: Long,
-    val isIncludedInStatistics: Boolean = true
+    val isIncludedInStatistics: Boolean = true,
+    val isWarmup: Boolean = false,
+    val equipmentModelId: String? = null,
+    val rir: Int? = null
 )
 
 /**
