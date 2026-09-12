@@ -33,5 +33,6 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 - Reactive Active Workout Tracking (`ObserveActiveWorkoutSessionUseCase`): Clean architecture domain UseCase & repository flow for reactive real-time workout session tracking.
 
 ### Fixed
+- CSV backup restore no longer marks every imported session as an active workout (`endTime = null`). Export now writes `sessionEndTime`; legacy CSVs without that column are treated as finished so the timer banner/notification/PiP cannot attach to restored history.
 - Fixed software keyboard Enter key inserting newlines instead of jumping to the next input field.
 - Fixed `ExerciseSetEditorSheet` input field being pushed off-screen/hidden beneath the keyboard by adopting a compact horizontal 3-column row (64dp height), `skipPartiallyExpanded = true`, and vertical scrolling.

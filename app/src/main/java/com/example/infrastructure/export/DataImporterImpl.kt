@@ -51,54 +51,60 @@ class DataImporterImpl(
                 return@withContext Result.failure(IllegalArgumentException("Empty CSV content"))
             }
 
-            // Expected header: sessionId,sessionStartTime,exerciseId,weight,reps,rpe
+            // Expected header: sessionId,sessionStartTime[,sessionEndTime],exerciseId,weight,reps,rpe
             val header = lines.first().split(",").map { it.trim() }
+            val columns = CsvColumns.fromHeader(header)
             val dataLines = lines.drop(1)
 
-            val sessionMap = mutableMapOf<String, Long>()
+            val sessionMap = mutableMapOf<String, ImportedSessionTimes>()
             val setsToInsert = mutableListOf<ExerciseSetEntity>()
 
             for (line in dataLines) {
                 val tokens = line.split(",").map { it.trim() }
-                if (tokens.size >= 5) {
-                    val sessionId = tokens[0]
-                    val startTime = tokens[1].toLongOrNull() ?: System.currentTimeMillis()
-                    val exerciseId = tokens[2]
-                    val weight = tokens[3].toDoubleOrNull() ?: 0.0
-                    val reps = tokens[4].toIntOrNull() ?: 0
-                    val rpe = if (tokens.size > 5) tokens[5].toDoubleOrNull() else null
+                if (tokens.size <= columns.requiredLastIndex) continue
 
-                    val now = System.currentTimeMillis()
-                    sessionMap[sessionId] = startTime
-                    setsToInsert.add(
-                        ExerciseSetEntity(
-                            id = UUID.randomUUID().toString(),
-                            sessionId = sessionId,
-                            exerciseId = exerciseId,
-                            weight = weight,
-                            reps = reps,
-                            rpe = rpe,
-                            restSeconds = null,
-                            orderIndex = setsToInsert.size + 1,
-                            createdAt = startTime,
-                            updatedAt = now
-                        )
+                val sessionId = tokens[columns.sessionId]
+                val startTime = tokens[columns.startTime].toLongOrNull() ?: System.currentTimeMillis()
+                val exerciseId = tokens[columns.exerciseId]
+                val weight = tokens[columns.weight].toDoubleOrNull() ?: 0.0
+                val reps = tokens[columns.reps].toIntOrNull() ?: 0
+                val rpe = columns.rpe.takeIf { it >= 0 }?.let { tokens.getOrNull(it)?.toDoubleOrNull() }
+
+                val now = System.currentTimeMillis()
+                if (sessionId !in sessionMap) {
+                    sessionMap[sessionId] = ImportedSessionTimes(
+                        startTime = startTime,
+                        endTime = columns.resolveEndTime(tokens, startTime)
                     )
                 }
+                setsToInsert.add(
+                    ExerciseSetEntity(
+                        id = UUID.randomUUID().toString(),
+                        sessionId = sessionId,
+                        exerciseId = exerciseId,
+                        weight = weight,
+                        reps = reps,
+                        rpe = rpe,
+                        restSeconds = null,
+                        orderIndex = setsToInsert.size + 1,
+                        createdAt = startTime,
+                        updatedAt = now
+                    )
+                )
             }
 
             var importedCount = 0
             val now = System.currentTimeMillis()
-            for ((sessionId, startTime) in sessionMap) {
+            for ((sessionId, times) in sessionMap) {
                 val existing = sessionDao.getById(sessionId)
                 if (existing == null) {
                     sessionDao.insert(
                         WorkoutSessionEntity(
                             id = sessionId,
-                            startTime = startTime,
-                            endTime = null,
+                            startTime = times.startTime,
+                            endTime = times.endTime,
                             notes = "",
-                            createdAt = startTime,
+                            createdAt = times.startTime,
                             updatedAt = now
                         )
                     )
@@ -114,6 +120,62 @@ class DataImporterImpl(
             Result.success(importedCount)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+}
+
+private data class ImportedSessionTimes(
+    val startTime: Long,
+    val endTime: Long?
+)
+
+private data class CsvColumns(
+    val sessionId: Int,
+    val startTime: Int,
+    val endTime: Int,
+    val exerciseId: Int,
+    val weight: Int,
+    val reps: Int,
+    val rpe: Int
+) {
+    val requiredLastIndex: Int = maxOf(sessionId, startTime, exerciseId, weight, reps)
+
+    fun resolveEndTime(tokens: List<String>, startTime: Long): Long? {
+        if (endTime < 0) {
+            // Legacy CSV has no completion column. Treat imported history as finished
+            // so restore cannot revive every workout as the active timer session.
+            return startTime
+        }
+        return tokens.getOrNull(endTime)?.takeIf { it.isNotEmpty() }?.toLongOrNull()
+    }
+
+    companion object {
+        fun fromHeader(header: List<String>): CsvColumns {
+            val sessionId = header.indexOf("sessionId")
+            val startTime = header.indexOf("sessionStartTime")
+            val exerciseId = header.indexOf("exerciseId")
+            val weight = header.indexOf("weight")
+            val reps = header.indexOf("reps")
+            if (sessionId >= 0 && startTime >= 0 && exerciseId >= 0 && weight >= 0 && reps >= 0) {
+                return CsvColumns(
+                    sessionId = sessionId,
+                    startTime = startTime,
+                    endTime = header.indexOf("sessionEndTime"),
+                    exerciseId = exerciseId,
+                    weight = weight,
+                    reps = reps,
+                    rpe = header.indexOf("rpe")
+                )
+            }
+            return CsvColumns(
+                sessionId = 0,
+                startTime = 1,
+                endTime = -1,
+                exerciseId = 2,
+                weight = 3,
+                reps = 4,
+                rpe = 5
+            )
         }
     }
 }

@@ -33,5 +33,6 @@
 - 도메인 활성 세션 반응형 관찰 (`ObserveActiveWorkoutSessionUseCase`): 클린 아키텍처 기반 실시간 진행 중 운동 세션 Flow 관찰 UseCase 구현.
 
 ### 수정됨 (Fixed)
+- CSV 백업 복원 시 모든 세션이 `endTime = null`로 들어와 진행 중 운동으로 되살아나던 문제를 수정. 내보내기 시 `sessionEndTime`을 포함하고, 해당 열이 없는 기존 CSV는 완료된 세션으로 복원한다.
 - 세트 입력창에서 숫자 패드 엔터 클릭 시 줄바꿈이 되던 현상을 `singleLine = true`, `ImeAction.Next`/`Done`, `FocusRequester`로 해결.
 - 키보드가 올라올 때 세트 입력 필드가 화면 밑으로 잘려 보이지 않던 문제를 가로 3열 컴팩트 배치(`Row`, 높이 64dp), `skipPartiallyExpanded = true` 및 `verticalScroll`을 적용하여 100% 가림 없는 시각적 노출로 완벽 해결.
