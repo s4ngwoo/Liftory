@@ -82,6 +82,9 @@ interface AppContainer {
     val calculateOneRepMaxUseCase: com.example.application.usecase.statistics.CalculateOneRepMaxUseCase
     val getLastExerciseHistoryUseCase: com.example.application.usecase.set.GetLastExerciseHistoryUseCase
 
+    val notificationScheduler: com.example.domain.port.NotificationScheduler
+    val wallClock: com.example.domain.port.WallClock
+    val monotonicClock: com.example.domain.port.MonotonicClock
     val restTimerManager: RestTimerManager
 }
 
@@ -243,7 +246,23 @@ class DefaultAppContainer(
         com.example.application.usecase.set.GetLastExerciseHistoryUseCase(exerciseSetRepository)
     }
 
+    override val wallClock: com.example.domain.port.WallClock by lazy {
+        com.example.domain.port.WallClock.System
+    }
+
+    override val monotonicClock: com.example.domain.port.MonotonicClock by lazy {
+        com.example.infrastructure.clock.SystemMonotonicClock()
+    }
+
+    override val notificationScheduler: com.example.domain.port.NotificationScheduler by lazy {
+        com.example.infrastructure.notification.AndroidNotificationScheduler(context)
+    }
+
     override val restTimerManager: RestTimerManager by lazy {
-        RestTimerManager()
+        RestTimerManager(
+            wallClock = wallClock,
+            monotonicClock = monotonicClock,
+            notificationScheduler = notificationScheduler
+        )
     }
 }

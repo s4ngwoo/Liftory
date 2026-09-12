@@ -40,20 +40,20 @@ class MainActivity : ComponentActivity() {
 
         handleDeepLinkIntent(intent)
 
-        // Observe active session: sync system status bar timer via Foreground Service
+        // Observe active session: sync system status bar timer via NotificationScheduler (N05.5/N05.6).
+        // Permission or FGS start failure must not affect local session observation.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 container.observeActiveWorkoutSessionUseCase().collect { session ->
                     if (session != null) {
                         val title = SessionNotesManager.getSessionTitle(session.notes).ifBlank { "운동 세션" }
-                        WorkoutTimerService.start(
-                            this@MainActivity,
-                            session.id,
-                            title,
-                            session.startTime
+                        container.notificationScheduler.startWorkoutOngoing(
+                            sessionId = session.id,
+                            title = title,
+                            startTimeEpochMs = session.startTime
                         )
                     } else {
-                        WorkoutTimerService.stop(this@MainActivity)
+                        container.notificationScheduler.stopWorkoutOngoing()
                     }
                 }
             }
