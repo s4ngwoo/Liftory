@@ -40,6 +40,7 @@ fun WorkoutSessionDetailScreen(
     viewModel: WorkoutSessionViewModel,
     onBack: () -> Unit,
     restTimerManager: RestTimerManager = remember { RestTimerManager() },
+    onNavigateToWorkoutMode: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
@@ -124,6 +125,17 @@ fun WorkoutSessionDetailScreen(
                 },
                 actions = {
                     if (!isCompleted) {
+                        onNavigateToWorkoutMode?.let { navigateToWorkoutMode ->
+                            IconButton(
+                                onClick = { currentSession?.let { navigateToWorkoutMode(it.id) } }
+                            ) {
+                                Icon(
+                                    Icons.Default.Timer,
+                                    contentDescription = "집중 운동 모드",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         if (sets.isNotEmpty()) {
                             FilledTonalButton(
                                 onClick = { showFinishWorkoutDialog = true },

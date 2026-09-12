@@ -26,11 +26,20 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.text.font.FontWeight
+
 /**
  * Stateless 3-page workout mode shell (N06).
  * Pager index maps to [WorkoutModePage], never to exercise index.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutModeScreen(
     state: WorkoutModeUiState,
@@ -39,6 +48,7 @@ fun WorkoutModeScreen(
     onPeekPlanRow: (String) -> Unit,
     onToggleMoreMenu: () -> Unit = {},
     onSubstituteExercise: (Int) -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val pages = WorkoutModePage.entries
@@ -68,6 +78,20 @@ fun WorkoutModeScreen(
             .imePadding()
             .testTag("workout_mode_root")
     ) {
+        if (onBack != null) {
+            TopAppBar(
+                title = { Text("집중 운동 모드", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        }
         state.errorMessage?.let { error ->
             Text(
                 text = error,

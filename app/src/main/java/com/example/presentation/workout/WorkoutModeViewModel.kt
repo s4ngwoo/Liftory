@@ -27,6 +27,17 @@ class WorkoutModeViewModel(
     initialPlan: SessionPlan? = null
 ) : ViewModel() {
 
+    class Factory(
+        private val wallClock: WallClock,
+        private val initialExecution: WorkoutExecution? = null,
+        private val initialPlan: SessionPlan? = null
+    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return WorkoutModeViewModel(wallClock, initialExecution, initialPlan) as T
+        }
+    }
+
     private val _uiState = MutableStateFlow(
         WorkoutModeUiState(
             execution = initialExecution,

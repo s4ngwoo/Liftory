@@ -1,6 +1,8 @@
 package com.example.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -8,6 +10,8 @@ import androidx.navigation.compose.composable
 import com.example.di.AppContainer
 import com.example.presentation.session.WorkoutSessionDetailScreen
 import com.example.presentation.session.WorkoutSessionViewModel
+import com.example.presentation.workout.WorkoutModeScreen
+import com.example.presentation.workout.WorkoutModeViewModel
 
 @Composable
 fun AppNavigation(
@@ -76,7 +80,26 @@ fun AppNavigation(
                 viewModel = sessionViewModel,
                 exerciseViewModel = exerciseViewModel,
                 onBack = { navController.popBackStack() },
-                restTimerManager = appContainer.restTimerManager
+                restTimerManager = appContainer.restTimerManager,
+                onNavigateToWorkoutMode = { id -> navController.navigate("workout_mode/$id") }
+            )
+        }
+        composable("workout_mode/{sessionId}") { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: return@composable
+            val workoutModeViewModel = viewModel<WorkoutModeViewModel>(
+                factory = WorkoutModeViewModel.Factory(
+                    wallClock = appContainer.wallClock
+                )
+            )
+            val uiState by workoutModeViewModel.uiState.collectAsStateWithLifecycle()
+            WorkoutModeScreen(
+                state = uiState,
+                onSelectPage = { workoutModeViewModel.onSelectPage(it) },
+                onPrimaryAction = { workoutModeViewModel.onPrimaryAction() },
+                onPeekPlanRow = { workoutModeViewModel.onPeekPlanRow(it) },
+                onToggleMoreMenu = { workoutModeViewModel.toggleMoreMenu() },
+                onSubstituteExercise = { workoutModeViewModel.onSwitchExerciseExplicit(it, com.example.domain.model.execution.InProgressSetDisposition.SKIP_REMAINING) },
+                onBack = { navController.popBackStack() }
             )
         }
     }
