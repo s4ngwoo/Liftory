@@ -51,12 +51,13 @@ class DataExporterImpl(
         try {
             val sessionsEntity = sessionDao.observeAll().first()
             val sb = java.lang.StringBuilder()
-            sb.append("sessionId,sessionStartTime,exerciseId,weight,reps,rpe\n")
+            sb.append("sessionId,sessionStartTime,sessionEndTime,exerciseId,weight,reps,rpe\n")
             
             for (session in sessionsEntity) {
                 val sets = setDao.getBySession(session.id)
+                val endTime = session.endTime?.toString() ?: ""
                 for (set in sets) {
-                    sb.append("${session.id},${session.startTime},${set.exerciseId},${set.weight},${set.reps},${set.rpe ?: ""}\n")
+                    sb.append("${session.id},${session.startTime},$endTime,${set.exerciseId},${set.weight},${set.reps},${set.rpe ?: ""}\n")
                 }
             }
             Result.success(sb.toString())

@@ -119,6 +119,34 @@ class DataImporterImplTest {
         assertEquals(1, sessionDao.sessions.size)
         assertEquals(2, setDao.sets.size)
         assertTrue(setDao.sets.values.all { it.sessionId == "session_csv_1" && it.weight == 120.0 })
+        // Legacy CSV has no endTime column; imported history must not become the active workout.
+        assertEquals(1691000000000L, sessionDao.sessions["session_csv_1"]?.endTime)
+    }
+
+    @Test
+    fun `importDataFromCsv preserves completed endTime from new format`() = runTest {
+        val csv = """
+            sessionId,sessionStartTime,sessionEndTime,exerciseId,weight,reps,rpe
+            session_csv_2,1691000000000,1691003600000,ex_squat,120.0,3,9.0
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromCsv(csv)
+
+        assertTrue(result.isSuccess)
+        assertEquals(1691003600000L, sessionDao.sessions["session_csv_2"]?.endTime)
+    }
+
+    @Test
+    fun `importDataFromCsv keeps empty endTime as an in-progress session`() = runTest {
+        val csv = """
+            sessionId,sessionStartTime,sessionEndTime,exerciseId,weight,reps,rpe
+            session_active,1691000000000,,ex_squat,120.0,3,9.0
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromCsv(csv)
+
+        assertTrue(result.isSuccess)
+        assertEquals(null, sessionDao.sessions["session_active"]?.endTime)
     }
 
     @Test
