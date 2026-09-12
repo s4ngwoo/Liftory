@@ -11,7 +11,20 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
-- System Theme Inset Integration & Dark Status Bar Icons: Configured `WindowInsetsControllerCompat` in `StrengthLogTheme` to force dark status bar and navigation bar icons, ensuring high contrast on the bright Bento theme (`#FDF7FF`) even on system-wide dark mode devices.
+- New Architecture & Domain Core (N00~N16):
+  - Execution State Machine: Defined `SetExecutionState` and `SessionExecutionState` with command ID idempotency and expected revision gating (EXEC-01~10).
+  - Persistent Rest & Session Timer: Implemented `TimerCalculator` over `RestTarget` with monotonic/wall clock decoupling and battery-friendly passive projections (TIME-01~08).
+  - 3-Page Workout Mode: Developed `WorkoutModeScreen` (Timer ↔ Current Exercise ↔ Today's Plan) with HorizontalPager, IME padding, TalkBack optimization, and save retry handling (UI-01~07).
+  - Mixed Routine Support & Release Gate: Supported bilateral stretching, cardio profiles without speed coercion, and bodyweight/weighted/assisted distinctions, verified through FLOW-A E2E release gate (MIX-01~06).
+  - Statistics & Plan Comparison: Added `WorkoutStatisticsCalculator` enforcing metric separation (kg, sec, meters), e1RM/RIR bounding (1~12 reps), warmup volume exclusion, and division-by-zero protection (STAT-01~09).
+  - Training Load & Recovery Conditioning: Calculated session-RPE arbitrary units (AU), EWMA series decay, Hooper-style 4~28 recovery scores, and SD=0 monotonicity null guards (LOAD-01~09).
+  - Robust Theil-Sen Trend Analysis: Implemented deterministic median-of-slopes trend fitting robust to extreme outliers, rolling-origin validation, and equipment block partitioning (TREND-01~08).
+  - Sync Conflict & Account Isolation: Built `SyncConflictResolver` with local revision and tombstone priority, per-user queue isolation, and privacy-preserving payload filtering (SYNC-01~08).
+  - Published Routine Library: Implemented `RoutineLibraryService` with author provenance preservation, personal load resets, and offline execution support (LIB-01~06).
+  - Gym Equipment Catalog: Managed equipment models, quantities (null, 0, n), routine fulfillment evaluation, and in-session substitution plan changes (GYM-01~06).
+  - Facility Operations & Tenant Isolation: Enforced multi-tenant isolation, instant permission revocation, QR check-in idempotency, and non-exaggerated frequency reports (OPS-01~07).
+  - Payment Orders & Settlement: Implemented tamper-proof order creation, double-spend prevention via idempotent webhooks, refund limits, and double-entry fee balancing (PAY-01~08).
+  - Opt-in Cohort Distribution: Built anonymized cohort aggregation, sample size thresholding (k >= 10), quantile-only distributions, and non-causal disclaimer enforcement (COHORT-01~07).
 - Safe Scroll Padding & Bottom Bar Occlusion Elimination: Extended list `contentPadding` across session detail (`bottom = 96.dp`), session list, routine list, and exercise library (`bottom = 88.dp`) to ensure the lowest items and buttons are never obscured by floating action buttons (FAB) or system navigation bars.
 - Accessibility (TalkBack) Silence on Chronometer Ticks: Suppressed disruptive 1-second TalkBack announcements on real-time elapsed workout and rest countdown timers using `Modifier.clearAndSetSemantics { }`, replacing them with static parent descriptions and polite status notifications.
 - Touch Target Expansion & Table Header Localization: Enlarged set completion checkbox hit targets (36dp) and standardized set table headers into clean Korean labels ("세트", "무게(kg)", "횟수", "RPE").
