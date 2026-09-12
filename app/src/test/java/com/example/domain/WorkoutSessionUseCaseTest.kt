@@ -3,10 +3,13 @@ package com.example.domain
 import com.example.application.usecase.session.CreateWorkoutSessionUseCase
 import com.example.application.usecase.session.DeleteWorkoutSessionUseCase
 import com.example.application.usecase.session.GetWorkoutSessionUseCase
+import com.example.application.usecase.session.ObserveActiveWorkoutSessionUseCase
+import com.example.application.usecase.session.UpdateWorkoutSessionUseCase
 import com.example.domain.model.WorkoutSession
 import com.example.domain.repository.WorkoutSessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -50,6 +53,8 @@ class WorkoutSessionUseCaseTest {
     private lateinit var createUseCase: CreateWorkoutSessionUseCase
     private lateinit var getUseCase: GetWorkoutSessionUseCase
     private lateinit var deleteUseCase: DeleteWorkoutSessionUseCase
+    private lateinit var updateUseCase: UpdateWorkoutSessionUseCase
+    private lateinit var observeActiveUseCase: ObserveActiveWorkoutSessionUseCase
 
     @Before
     fun setUp() {
@@ -57,6 +62,8 @@ class WorkoutSessionUseCaseTest {
         createUseCase = CreateWorkoutSessionUseCase(fakeRepository)
         getUseCase = GetWorkoutSessionUseCase(fakeRepository)
         deleteUseCase = DeleteWorkoutSessionUseCase(fakeRepository)
+        updateUseCase = UpdateWorkoutSessionUseCase(fakeRepository)
+        observeActiveUseCase = ObserveActiveWorkoutSessionUseCase(fakeRepository)
     }
 
     @Test
@@ -81,5 +88,44 @@ class WorkoutSessionUseCaseTest {
         val deleteResult = deleteUseCase(session.id)
         assertTrue(deleteResult.isSuccess)
         assertNull(getUseCase(session.id))
+    }
+
+    @Test
+    fun updateSession_stampsUpdatedAtForSync() = runTest {
+        val session = createUseCase(notes = "Chest Day").getOrThrow()
+        val originalUpdatedAt = session.updatedAt
+
+        val result = updateUseCase(session.copy(notes = "Chest Day + notes"))
+        assertTrue(result.isSuccess)
+
+        val stored = getUseCase(session.id)
+        assertEquals("Chest Day + notes", stored?.notes)
+        assertTrue(stored!!.updatedAt >= originalUpdatedAt)
+    }
+
+    @Test
+    fun finishSession_clearsActiveWorkoutObservation() = runTest {
+        val session = createUseCase(notes = "Live timer").getOrThrow()
+        assertEquals(session.id, observeActiveUseCase().first()?.id)
+        assertNull(observeActiveUseCase().first()?.endTime)
+
+        val endedAt = 1_700_000_000_000L
+        val result = updateUseCase(session.copy(endTime = endedAt))
+        assertTrue(result.isSuccess)
+
+        assertNull(observeActiveUseCase().first())
+        assertEquals(endedAt, getUseCase(session.id)?.endTime)
+    }
+
+    @Test
+    fun observeActiveSession_ignoresFinishedSessions() = runTest {
+        val finished = createUseCase(notes = "Yesterday").getOrThrow()
+        updateUseCase(finished.copy(endTime = 2_000L))
+
+        val active = createUseCase(notes = "Now").getOrThrow()
+        val observed = observeActiveUseCase().first()
+
+        assertEquals(active.id, observed?.id)
+        assertNull(observed?.endTime)
     }
 }
