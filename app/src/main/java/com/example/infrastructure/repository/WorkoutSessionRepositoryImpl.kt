@@ -40,7 +40,7 @@ class WorkoutSessionRepositoryImpl(
                     operation = SyncOperation.CREATE,
                     payloadJson = adapter.toJson(session)
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
             session
         }
@@ -61,7 +61,7 @@ class WorkoutSessionRepositoryImpl(
                     operation = SyncOperation.UPDATE,
                     payloadJson = adapter.toJson(session)
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
         }
     }
@@ -78,7 +78,7 @@ class WorkoutSessionRepositoryImpl(
                     operation = SyncOperation.DELETE,
                     payloadJson = "{}"
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
         }
     }

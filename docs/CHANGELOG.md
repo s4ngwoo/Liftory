@@ -11,6 +11,7 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
+- Sync outbox last-write-wins: drop superseded pending uploads for the same entity and skip Firestore merges whose `updatedAt` is older than the remote document, so a retried edit cannot overwrite a later one.
 - New Architecture & Domain Core (N00~N16):
   - Execution State Machine: Defined `SetExecutionState` and `SessionExecutionState` with command ID idempotency and expected revision gating (EXEC-01~10).
   - Persistent Rest & Session Timer: Implemented `TimerCalculator` over `RestTarget` with monotonic/wall clock decoupling and battery-friendly passive projections (TIME-01~08).

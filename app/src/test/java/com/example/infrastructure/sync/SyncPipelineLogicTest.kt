@@ -5,6 +5,7 @@ import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.repository.RemoteSyncDataSource
 import com.example.domain.repository.SyncQueueRepository
+import com.example.domain.sync.SyncOutboxPolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -60,6 +61,30 @@ class FakeRemoteSyncDataSource : RemoteSyncDataSource {
     }
 }
 
+class RevisionAwareFakeRemote : RemoteSyncDataSource {
+    private val remoteUpdatedAt = mutableMapOf<String, Long>()
+    private val notesByEntity = mutableMapOf<String, String>()
+
+    override suspend fun sync(pendingUpload: PendingUpload): Result<Unit> {
+        val incoming = SyncOutboxPolicy.parseUpdatedAtEpochMs(pendingUpload.payloadJson)
+        val remote = remoteUpdatedAt[pendingUpload.entityId]
+        if (!SyncOutboxPolicy.shouldApplyWrite(incoming, remote)) {
+            return Result.success(Unit)
+        }
+        if (incoming != null) {
+            remoteUpdatedAt[pendingUpload.entityId] = incoming
+        }
+        val notes = Regex("\"notes\"\\s*:\\s*\"([^\"]+)\"").find(pendingUpload.payloadJson)
+            ?.groupValues?.get(1)
+        if (notes != null) {
+            notesByEntity[pendingUpload.entityId] = notes
+        }
+        return Result.success(Unit)
+    }
+
+    fun appliedPayloadNotes(entityId: String = "session_1"): String? = notesByEntity[entityId]
+}
+
 class SyncPipelineLogicTest {
 
     private lateinit var syncQueueRepository: FakeSyncQueueRepository
@@ -91,6 +116,67 @@ class SyncPipelineLogicTest {
         assertEquals(0, syncQueueRepository.queue.size)
         assertTrue(syncQueueRepository.completedIds.contains("upload_1"))
         assertEquals(1, remoteSyncDataSource.syncedItems.size)
+    }
+
+    @Test
+    fun `stale older upload in the same batch is dropped so only the newest payload syncs`() = runTest {
+        val stale = PendingUpload(
+            id = "upload_stale",
+            entityType = EntityType.SESSION,
+            entityId = "session_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"id":"session_1","notes":"v1","updatedAt":1000}""",
+            createdAt = 1000L
+        )
+        val newest = PendingUpload(
+            id = "upload_newest",
+            entityType = EntityType.SESSION,
+            entityId = "session_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"id":"session_1","notes":"v2","updatedAt":2000}""",
+            createdAt = 2000L
+        )
+        syncQueueRepository.queue.add(stale)
+        syncQueueRepository.queue.add(newest)
+
+        val hasFailures = SyncBatchProcessor.process(syncQueueRepository, remoteSyncDataSource)
+
+        assertTrue(!hasFailures)
+        assertEquals(listOf("upload_newest"), remoteSyncDataSource.syncedItems.map { it.id })
+        assertEquals(0, syncQueueRepository.queue.size)
+        assertTrue(syncQueueRepository.completedIds.contains("upload_stale"))
+        assertTrue(syncQueueRepository.completedIds.contains("upload_newest"))
+    }
+
+    @Test
+    fun `failed older upload that retries after a newer write must not apply stale payload`() = runTest {
+        val remote = RevisionAwareFakeRemote()
+        val stale = PendingUpload(
+            id = "upload_v1",
+            entityType = EntityType.SESSION,
+            entityId = "session_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"id":"session_1","notes":"old notes","updatedAt":1000}""",
+            createdAt = 1000L
+        )
+        val newest = PendingUpload(
+            id = "upload_v2",
+            entityType = EntityType.SESSION,
+            entityId = "session_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"id":"session_1","notes":"final notes","updatedAt":2000}""",
+            createdAt = 2000L
+        )
+
+        remote.sync(newest)
+        assertEquals("final notes", remote.appliedPayloadNotes())
+
+        syncQueueRepository.queue.add(stale)
+        val hasFailures = SyncBatchProcessor.process(syncQueueRepository, remote)
+
+        assertTrue(!hasFailures)
+        assertEquals("final notes", remote.appliedPayloadNotes())
+        assertEquals(0, syncQueueRepository.queue.size)
     }
 
     @Test

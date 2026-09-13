@@ -17,7 +17,7 @@ class SyncQueueRepositoryImpl(
 
     override suspend fun enqueue(pendingUpload: PendingUpload): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
-            pendingUploadDao.insert(pendingUpload.toEntity())
+            pendingUploadDao.replaceForEntity(pendingUpload.toEntity())
         }
     }
 

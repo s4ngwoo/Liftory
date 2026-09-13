@@ -11,6 +11,7 @@
 
 ## [Unreleased]
 
+- 동기화 아웃박스 last-write-wins: 같은 엔티티의 이전 pending 업로드를 제거하고, 원격 문서보다 오래된 `updatedAt` merge를 건너뛰어 재시도된 이전 수정이 이후 수정을 덮어쓰지 않게 함.
 - 신규 아키텍처 및 도메인 코어 (N00~N16 전 페이즈 완수):
   - 실행 상태 머신: `SetExecutionState`, `SessionExecutionState` 및 멱등 command ID 기반 상태 전이 엔진 구축 (EXEC-01~10).
   - 영속 휴식 및 세션 타이머: Monotonic/Wall 시계 분리와 배터리 친화적 passive projection `TimerCalculator` 구현 (TIME-01~08).
