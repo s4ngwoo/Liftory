@@ -111,4 +111,29 @@ class FacilityOperationsTest {
         assertEquals(0, summary.personalRpeLogsCount)
         assertNull(summary.personalNotesPayload)
     }
+
+    @Test
+    fun `unknown operator id is denied facility access`() {
+        val service = FacilityOperationsService()
+        assertFalse(service.verifyFacilityAccessById("missing_op", "fac_A"))
+    }
+
+    @Test
+    fun `empty check-in list reports zero occupancy`() {
+        val report = FacilityOperationsService.resolveOccupancyAndVisits(emptyList())
+        assertEquals(0, report.confirmedVisitsCount)
+        assertEquals(0, report.estimatedCurrentOccupancy)
+        assertEquals(0, report.missingCheckoutCount)
+    }
+
+    @Test
+    fun `equipment frequency with known membership still keeps the observed-only caveat`() {
+        val report = FacilityOperationsService.aggregateEquipmentFrequency(
+            appLoggedSessionsCount = 10,
+            totalMembers = 100
+        )
+
+        assertEquals(10.0, report.estimatedMarketSharePercent!!, 0.001)
+        assertTrue(report.metricCaveat.contains("앱 기록 기준"))
+    }
 }

@@ -168,4 +168,142 @@ class SyncConflictAndBoundaryTest {
         assertFalse(result.isSuccess)
         assertEquals("Unsupported schema version: 999", result.errorMessage)
     }
+
+    @Test
+    fun `newer remote update resurrects a stale local tombstone`() {
+        val staleTombstone = SyncableEntity(
+            id = "sess_revived",
+            revision = 2L,
+            payload = "",
+            isDeleted = true,
+            updatedAtEpochMs = 1000L
+        )
+        val newerRemote = SyncableEntity(
+            id = "sess_revived",
+            revision = 5L,
+            payload = "resurrected",
+            isDeleted = false,
+            updatedAtEpochMs = 4000L
+        )
+
+        val resolved = SyncConflictResolver.resolve(local = staleTombstone, remote = newerRemote)
+
+        assertFalse(resolved.isDeleted)
+        assertEquals(5L, resolved.revision)
+        assertEquals("resurrected", resolved.payload)
+    }
+
+    @Test
+    fun `higher revision remote tombstone wins over live local`() {
+        val local = SyncableEntity(
+            id = "sess_live",
+            revision = 3L,
+            payload = "still here",
+            isDeleted = false
+        )
+        val remoteTombstone = SyncableEntity(
+            id = "sess_live",
+            revision = 4L,
+            payload = "",
+            isDeleted = true
+        )
+
+        val resolved = SyncConflictResolver.resolve(local = local, remote = remoteTombstone)
+
+        assertTrue(resolved.isDeleted)
+        assertEquals(4L, resolved.revision)
+    }
+
+    @Test
+    fun `equal revision prefers later timestamp then local on a tie`() {
+        val local = SyncableEntity(
+            id = "sess_eq",
+            revision = 2L,
+            payload = "local",
+            updatedAtEpochMs = 2000L
+        )
+        val olderRemote = SyncableEntity(
+            id = "sess_eq",
+            revision = 2L,
+            payload = "remote-old",
+            updatedAtEpochMs = 1000L
+        )
+        val newerRemote = SyncableEntity(
+            id = "sess_eq",
+            revision = 2L,
+            payload = "remote-new",
+            updatedAtEpochMs = 3000L
+        )
+        val tiedRemote = SyncableEntity(
+            id = "sess_eq",
+            revision = 2L,
+            payload = "remote-tie",
+            updatedAtEpochMs = 2000L
+        )
+
+        assertEquals("local", SyncConflictResolver.resolve(local, olderRemote).payload)
+        assertEquals("remote-new", SyncConflictResolver.resolve(local, newerRemote).payload)
+        assertEquals("local", SyncConflictResolver.resolve(local, tiedRemote).payload)
+    }
+
+    @Test
+    fun `removeCompleted drops only that command and isolates other users`() {
+        val outbox = InMemorySyncOutbox()
+        outbox.enqueue(
+            "user_A",
+            PendingUpload(
+                id = "cmd_1",
+                entityType = EntityType.SESSION,
+                entityId = "sess_A",
+                operation = SyncOperation.CREATE,
+                payloadJson = "A"
+            )
+        )
+        outbox.enqueue(
+            "user_B",
+            PendingUpload(
+                id = "cmd_1",
+                entityType = EntityType.SESSION,
+                entityId = "sess_B",
+                operation = SyncOperation.CREATE,
+                payloadJson = "B"
+            )
+        )
+
+        outbox.removeCompleted("user_A", "cmd_1")
+
+        assertTrue(outbox.getPending("user_A").isEmpty())
+        assertEquals(1, outbox.getPending("user_B").size)
+        assertEquals("sess_B", outbox.getPending("user_B")[0].entityId)
+    }
+
+    @Test
+    fun `schema gate defaults missing version to 1 and accepts the current max`() {
+        assertTrue(SyncSchemaGate.validateAndParse("""{"foo":1}""", 2).isSuccess)
+        assertTrue(SyncSchemaGate.validateAndParse("""{"schemaVersion":2}""", 2).isSuccess)
+        assertFalse(SyncSchemaGate.validateAndParse("""{"schemaVersion":3}""", 2).isSuccess)
+    }
+
+    @Test
+    fun `sharing filter strips stress fatigue and cohortId and cleans trailing commas`() {
+        val stripped = SharingPayloadFilter.filterPersonalData(
+            rawHealthPayload = """{"rpe":8,"stress":3,"fatigue":4,"cohortId":"c1","weightKg":80}""",
+            allowHealthSharing = false,
+            allowCohortSharing = false
+        )
+
+        assertFalse(stripped.contains("stress"))
+        assertFalse(stripped.contains("fatigue"))
+        assertFalse(stripped.contains("cohortId"))
+        assertTrue(stripped.contains("weightKg"))
+        assertFalse(stripped.contains(",}"))
+
+        val kept = SharingPayloadFilter.filterPersonalData(
+            rawHealthPayload = """{"rpe":8,"stress":3,"fatigue":4,"weightKg":80}""",
+            allowHealthSharing = true,
+            allowCohortSharing = false
+        )
+        assertTrue(kept.contains("stress"))
+        assertTrue(kept.contains("fatigue"))
+    }
 }

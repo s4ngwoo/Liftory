@@ -107,6 +107,20 @@ class PaymentAndSettlementTest {
     }
 
     @Test
+    fun `distinct webhook event ids for one order still record a single ledger`() {
+        val service = PaymentProcessingService()
+        service.createOrder("ord_multi_hook", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+
+        val first = service.handleApprovalWebhook("hook_a", "ord_multi_hook")
+        val second = service.handleApprovalWebhook("hook_b", "ord_multi_hook")
+
+        assertTrue(first.isSuccess)
+        assertTrue(second.isSuccess)
+        assertEquals(1, service.getLedgersForOrder("ord_multi_hook").size)
+        assertEquals(PaymentStatus.APPROVED, service.getOrder("ord_multi_hook")?.status)
+    }
+
+    @Test
     fun `PAY-07 ledger fee split strictly balances with zero fractional mismatch`() {
         val gross = 100_000L
         val entry = SettlementCalculator.computeLedgerEntry(
@@ -123,5 +137,20 @@ class PaymentAndSettlementTest {
         // Strict balance check: Gross = pgFee + platformFee + net
         val sum = entry.pgFee + entry.platformFee + entry.netSettlementAmount
         assertEquals("Ledger fee sum must equal gross amount exactly", gross, sum)
+    }
+
+    @Test
+    fun `truncated small-amount fee split still balances to the gross`() {
+        val entry = SettlementCalculator.computeLedgerEntry(
+            orderId = "ord_tiny",
+            grossAmount = 1L,
+            pgFeeRate = 0.033,
+            platformFeeRate = 0.05
+        )
+
+        assertEquals(0L, entry.pgFee)
+        assertEquals(0L, entry.platformFee)
+        assertEquals(1L, entry.netSettlementAmount)
+        assertEquals(1L, entry.pgFee + entry.platformFee + entry.netSettlementAmount)
     }
 }

@@ -86,4 +86,20 @@ class CohortDistributionTest {
         assertTrue("Disclaimer must clarify observational distribution without claiming causal superiority",
             disclaimer.contains("인과적 우수성이나 최적 루틴을 의미하지 않습니다"))
     }
+
+    @Test
+    fun `unknown user cannot upload until they explicitly opt in`() {
+        val service = CohortService()
+
+        assertFalse(service.canUploadCohortPayload("never_seen"))
+        service.setConsent("never_seen", optedIn = true)
+        assertTrue(service.canUploadCohortPayload("never_seen"))
+    }
+
+    @Test
+    fun `below-threshold evaluation still carries the observational disclaimer`() {
+        val hidden = CohortService.evaluateCohortDistribution(sampleCount = 0, kThreshold = 10)
+        assertFalse(hidden.isExposed)
+        assertTrue(hidden.disclaimerText.contains("인과적 우수성이나 최적 루틴을 의미하지 않습니다"))
+    }
 }
