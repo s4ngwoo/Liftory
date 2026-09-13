@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.example.infrastructure.db.entity.PendingUploadEntity
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +13,15 @@ import kotlinx.coroutines.flow.Flow
 interface PendingUploadDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(pendingUpload: PendingUploadEntity)
+
+    @Query("DELETE FROM pending_uploads WHERE entityType = :entityType AND entityId = :entityId")
+    suspend fun deleteByEntity(entityType: String, entityId: String)
+
+    @Transaction
+    suspend fun replaceForEntity(pendingUpload: PendingUploadEntity) {
+        deleteByEntity(pendingUpload.entityType, pendingUpload.entityId)
+        insert(pendingUpload)
+    }
 
     @Query("SELECT * FROM pending_uploads ORDER BY createdAt ASC LIMIT :limit")
     suspend fun getNextPending(limit: Int): List<PendingUploadEntity>

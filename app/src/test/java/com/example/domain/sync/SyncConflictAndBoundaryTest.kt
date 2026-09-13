@@ -159,6 +159,45 @@ class SyncConflictAndBoundaryTest {
     }
 
     @Test
+    fun `outbox drops older pending writes for the same entity`() {
+        val stale = PendingUpload(
+            id = "old",
+            entityType = EntityType.SESSION,
+            entityId = "sess_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"updatedAt":1000}""",
+            createdAt = 1000L
+        )
+        val newest = PendingUpload(
+            id = "new",
+            entityType = EntityType.SESSION,
+            entityId = "sess_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"updatedAt":2000}""",
+            createdAt = 2000L
+        )
+        val other = PendingUpload(
+            id = "other",
+            entityType = EntityType.SET,
+            entityId = "set_1",
+            operation = SyncOperation.UPDATE,
+            payloadJson = """{"updatedAt":1500}""",
+            createdAt = 1500L
+        )
+
+        assertEquals(setOf("old"), SyncOutboxPolicy.supersededPendingIds(listOf(stale, newest, other)))
+    }
+
+    @Test
+    fun `stale payload with older updatedAt must not overwrite newer remote state`() {
+        assertFalse(SyncOutboxPolicy.shouldApplyWrite(incomingUpdatedAt = 1000L, remoteUpdatedAt = 2000L))
+        assertTrue(SyncOutboxPolicy.shouldApplyWrite(incomingUpdatedAt = 2000L, remoteUpdatedAt = 1000L))
+        assertTrue(SyncOutboxPolicy.shouldApplyWrite(incomingUpdatedAt = 2000L, remoteUpdatedAt = 2000L))
+        assertTrue(SyncOutboxPolicy.shouldApplyWrite(incomingUpdatedAt = null, remoteUpdatedAt = 2000L))
+        assertEquals(1234L, SyncOutboxPolicy.parseUpdatedAtEpochMs("""{"notes":"hi","updatedAt":1234}"""))
+    }
+
+    @Test
     fun `SYNC-08 unsupported future schema version preserves existing local data with error`() {
         val currentSupportedSchema = 2
         val payloadFromFuture = """{"schemaVersion":999,"unknownData":"xyz"}"""

@@ -40,7 +40,7 @@ class ExerciseRepositoryImpl(
                         operation = SyncOperation.CREATE,
                         payloadJson = adapter.toJson(exercise)
                     )
-                    pendingUploadDao.insert(pending.toEntity())
+                    pendingUploadDao.replaceForEntity(pending.toEntity())
                 }
             }
             exercise
@@ -59,7 +59,7 @@ class ExerciseRepositoryImpl(
                         operation = SyncOperation.UPDATE,
                         payloadJson = adapter.toJson(exercise)
                     )
-                    pendingUploadDao.insert(pending.toEntity())
+                    pendingUploadDao.replaceForEntity(pending.toEntity())
                 }
             }
         }
@@ -78,7 +78,7 @@ class ExerciseRepositoryImpl(
                         operation = SyncOperation.DELETE,
                         payloadJson = "{}"
                     )
-                    pendingUploadDao.insert(pending.toEntity())
+                    pendingUploadDao.replaceForEntity(pending.toEntity())
                 }
             }
         }

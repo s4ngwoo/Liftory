@@ -99,7 +99,7 @@ class RoutineTemplateRepositoryImpl(
                     operation = SyncOperation.CREATE,
                     payloadJson = adapter.toJson(template)
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
             Result.success(template)
         } catch (e: Exception) {
@@ -138,7 +138,7 @@ class RoutineTemplateRepositoryImpl(
                     operation = SyncOperation.UPDATE,
                     payloadJson = adapter.toJson(template)
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -158,7 +158,7 @@ class RoutineTemplateRepositoryImpl(
                     operation = SyncOperation.DELETE,
                     payloadJson = "{}"
                 )
-                pendingUploadDao.insert(pending.toEntity())
+                pendingUploadDao.replaceForEntity(pending.toEntity())
             }
             Result.success(Unit)
         } catch (e: Exception) {

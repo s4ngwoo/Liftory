@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.domain.model.PendingUpload
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.RemoteSyncDataSource
+import com.example.domain.sync.SyncOutboxPolicy
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
@@ -51,6 +52,27 @@ class FirestoreSyncDataSource(
             } catch (e: Exception) {
                 Log.e("FirestoreSync", "Failed to parse payload JSON", e)
                 return Result.failure(e)
+            }
+
+            val incomingUpdatedAt = SyncOutboxPolicy.parseUpdatedAtEpochMs(
+                pendingUpload.payloadJson
+            )
+            if (incomingUpdatedAt != null) {
+                val existing = docRef.get().await()
+                if (existing.exists()) {
+                    val remoteUpdatedAt = existing.getLong("updatedAt")
+                    if (!SyncOutboxPolicy.shouldApplyWrite(
+                            incomingUpdatedAt,
+                            remoteUpdatedAt
+                        )
+                    ) {
+                        Log.w(
+                            "FirestoreSync",
+                            "Skipping stale upload ${pendingUpload.id} for ${pendingUpload.entityId}"
+                        )
+                        return Result.success(Unit)
+                    }
+                }
             }
 
             docRef.set(dataMap, SetOptions.merge()).await()
