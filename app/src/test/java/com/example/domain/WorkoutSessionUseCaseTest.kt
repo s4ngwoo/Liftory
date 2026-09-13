@@ -121,5 +121,32 @@ class WorkoutSessionUseCaseTest {
         val updatedFirstSession = getUseCase(firstSession.id)
         assertNotNull(updatedFirstSession?.endTime)
     }
+
+    @Test
+    fun createSession_finishExistingActiveClosesEveryOpenSessionBeforeStarting() = runTest {
+        // Import or a crash can leave more than one endTime=null row.
+        fakeRepository.create(
+            WorkoutSession(id = "stale_a", startTime = 1_000L, endTime = null, notes = "A")
+        )
+        fakeRepository.create(
+            WorkoutSession(id = "stale_b", startTime = 2_000L, endTime = null, notes = "B")
+        )
+
+        val startedAt = 3_000L
+        val result = createUseCase(
+            notes = "Fresh",
+            startTime = startedAt,
+            finishExistingActive = true
+        )
+
+        assertTrue(result.isSuccess)
+        val created = result.getOrThrow()
+        assertEquals("Fresh", created.notes)
+        assertNull(created.endTime)
+        assertEquals(startedAt, getUseCase("stale_a")?.endTime)
+        assertEquals(startedAt, getUseCase("stale_b")?.endTime)
+        assertEquals(1, fakeRepository.getActiveSessions().size)
+        assertEquals(created.id, fakeRepository.getActiveSession()?.id)
+    }
 }
 

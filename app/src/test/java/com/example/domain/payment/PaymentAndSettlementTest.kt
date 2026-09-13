@@ -89,6 +89,24 @@ class PaymentAndSettlementTest {
     }
 
     @Test
+    fun `unknown order webhook refund and cancel fail closed`() {
+        val service = PaymentProcessingService()
+
+        val hook = service.handleApprovalWebhook("hook_missing", "ord_missing")
+        assertFalse(hook.isSuccess)
+        assertEquals("Order not found", hook.errorMessage)
+
+        val refund = service.refund("ord_missing", 1_000L)
+        assertFalse(refund.isSuccess)
+        assertEquals("Order not found", refund.errorMessage)
+
+        val cancel = service.cancelOrder("ord_missing")
+        assertFalse(cancel.isSuccess)
+        assertEquals("Order not found", cancel.errorMessage)
+        assertTrue(service.getAllOrders().isEmpty())
+    }
+
+    @Test
     fun `PAY-07 ledger fee split strictly balances with zero fractional mismatch`() {
         val gross = 100_000L
         val entry = SettlementCalculator.computeLedgerEntry(

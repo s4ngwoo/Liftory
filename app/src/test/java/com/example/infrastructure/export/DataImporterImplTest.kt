@@ -174,6 +174,111 @@ class DataImporterImplTest {
     }
 
     @Test
+    fun `importDataFromCsv fails on empty content without writing rows`() = runTest {
+        val result = dataImporter.importDataFromCsv("   \n\n")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(0, sessionDao.sessions.size)
+        assertEquals(0, setDao.sets.size)
+    }
+
+    @Test
+    fun `importDataFromCsv skips short malformed lines and still imports valid rows`() = runTest {
+        val csv = """
+            sessionId,sessionStartTime,exerciseId,weight,reps,rpe
+            not-enough-columns
+            session_ok,1691000000000,ex_deadlift,180.0,2,8.0
+            also,short
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromCsv(csv)
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, result.getOrNull()) // 1 session + 1 set
+        assertEquals(1, sessionDao.sessions.size)
+        assertEquals(1, setDao.sets.size)
+        assertEquals("session_ok", sessionDao.sessions.values.single().id)
+        assertEquals("ex_deadlift", setDao.sets.values.single().exerciseId)
+    }
+
+    @Test
+    fun `importDataFromCsv defaults invalid numeric tokens instead of aborting the file`() = runTest {
+        val csv = """
+            sessionId,sessionStartTime,exerciseId,weight,reps,rpe
+            session_bad_nums,1691000000000,ex_row,not-a-number,oops,also-bad
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromCsv(csv)
+
+        assertTrue(result.isSuccess)
+        val imported = setDao.sets.values.single()
+        assertEquals(0.0, imported.weight, 0.0)
+        assertEquals(0, imported.reps)
+        assertEquals(null, imported.rpe)
+    }
+
+    @Test
+    fun `importDataFromCsv does not overwrite an existing finished session`() = runTest {
+        sessionDao.insert(
+            WorkoutSessionEntity(
+                id = "session_csv_1",
+                startTime = 1_000L,
+                endTime = 2_000L,
+                notes = "already finished",
+                createdAt = 1_000L,
+                updatedAt = 2_000L
+            )
+        )
+
+        val csv = """
+            sessionId,sessionStartTime,exerciseId,weight,reps,rpe
+            session_csv_1,1691000000000,ex_squat,120.0,3,9.0
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromCsv(csv)
+
+        assertTrue(result.isSuccess)
+        val preserved = sessionDao.sessions["session_csv_1"]
+        assertEquals(2_000L, preserved?.endTime)
+        assertEquals("already finished", preserved?.notes)
+        assertEquals(1_000L, preserved?.startTime)
+        assertEquals(1, setDao.sets.size)
+    }
+
+    @Test
+    fun `importDataFromJson allows sets that reference a session already in the database`() = runTest {
+        sessionDao.insert(
+            WorkoutSessionEntity(
+                id = "session_existing",
+                startTime = 1_690_000_000_000L,
+                endTime = 1_690_003_600_000L,
+                notes = "local",
+                createdAt = 1_690_000_000_000L,
+                updatedAt = 1_690_003_600_000L
+            )
+        )
+        val json = """
+            {
+                "schemaVersion": 1,
+                "exportedAt": 1700000000000,
+                "sessions": [],
+                "sets": [
+                    {"id": "set_fk", "sessionId": "session_existing", "exerciseId": "ex_ohp", "weight": 40.0, "reps": 8, "orderIndex": 1, "createdAt": 1690000500000, "updatedAt": 1690000500000}
+                ]
+            }
+        """.trimIndent()
+
+        val result = dataImporter.importDataFromJson(json)
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull())
+        assertEquals(1, sessionDao.sessions.size)
+        assertEquals("local", sessionDao.sessions["session_existing"]?.notes)
+        assertEquals("session_existing", setDao.sets["set_fk"]?.sessionId)
+    }
+
+    @Test
     fun `export and import round-trip preserves all sessions and sets semantic equality (DATA-06)`() = runTest {
         val exporter = DataExporterImpl(sessionDao, setDao, Dispatchers.Unconfined)
 
