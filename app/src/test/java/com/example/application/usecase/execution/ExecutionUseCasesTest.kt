@@ -139,6 +139,65 @@ class ExecutionUseCasesTest {
     }
 
     @Test
+    fun `StartSession rejects missing plan without creating a session`() = runTest {
+        val result = startSession("plan_missing")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(sessionRepo.sessions.isEmpty())
+        assertTrue(executionRepo.store.isEmpty())
+    }
+
+    @Test
+    fun `StartSession rejects existing active workout so a second live session cannot start`() = runTest {
+        val plan = confirmedPlan()
+        planRepo.plans[plan.id] = plan
+        sessionRepo.sessions["live_import"] = WorkoutSession(
+            id = "live_import",
+            startTime = 1_000L,
+            endTime = null,
+            notes = "CSV restored without endTime"
+        )
+
+        val result = startSession(plan.id)
+
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(exception is com.example.domain.exception.ActiveSessionAlreadyExistsException)
+        val conflict = exception as com.example.domain.exception.ActiveSessionAlreadyExistsException
+        assertEquals("live_import", conflict.activeSession.id)
+        assertTrue(executionRepo.store.isEmpty())
+        assertEquals(1, sessionRepo.sessions.size)
+    }
+
+    @Test
+    fun `StartSession rejects orphan active execution even when no session row is open`() = runTest {
+        val plan = confirmedPlan()
+        planRepo.plans[plan.id] = plan
+        executionRepo.store["orphan_exec"] = WorkoutExecution(
+            sessionId = "orphan_exec",
+            planId = "plan_old",
+            planSnapshot = plan,
+            sessionState = SessionExecutionState.ACTIVE,
+            currentExerciseIndex = 0,
+            currentSetIndex = 0,
+            setState = SetExecutionState.Ready,
+            revision = 1L,
+            startedAtEpochMs = 1_000L
+        )
+
+        val result = startSession(plan.id)
+
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(exception is com.example.domain.exception.ActiveSessionAlreadyExistsException)
+        val conflict = exception as com.example.domain.exception.ActiveSessionAlreadyExistsException
+        assertEquals("orphan_exec", conflict.activeSession.id)
+        assertTrue(sessionRepo.sessions.isEmpty())
+        assertEquals(1, executionRepo.store.size)
+    }
+
+    @Test
     fun `F-TIME flow CompleteSet does not create statistics record until confirm`() = runTest {
         val plan = confirmedPlan()
         planRepo.plans[plan.id] = plan
