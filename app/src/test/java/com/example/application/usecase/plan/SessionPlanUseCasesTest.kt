@@ -372,4 +372,131 @@ class SessionPlanUseCasesTest {
         assertFalse("Planned set from history must remain uncompleted in plan", plannedSet.isCompleted)
         assertTrue(plan.exercises.first().notes.contains("past_session_1"))
     }
+
+    @Test
+    fun `PLAN-05 history grouping keeps consecutive A-B-A as three planned exercises`() = runTest {
+        exerciseRepository.exercises["ex_squat"] = Exercise(
+            id = "ex_squat",
+            name = "스쿼트",
+            muscleGroup = "Legs",
+            equipmentType = EquipmentType.FREE_WEIGHT
+        )
+
+        val fakeSetRepo = object : com.example.domain.repository.ExerciseSetRepository {
+            val sets = listOf(
+                com.example.domain.model.ExerciseSet(
+                    id = "s1",
+                    sessionId = "past_session_aba",
+                    exerciseId = "ex_bench",
+                    weight = 80.0,
+                    reps = 8,
+                    restSeconds = 120,
+                    orderIndex = 0
+                ),
+                com.example.domain.model.ExerciseSet(
+                    id = "s2",
+                    sessionId = "past_session_aba",
+                    exerciseId = "ex_squat",
+                    weight = 120.0,
+                    reps = 5,
+                    restSeconds = 180,
+                    orderIndex = 1
+                ),
+                com.example.domain.model.ExerciseSet(
+                    id = "s3",
+                    sessionId = "past_session_aba",
+                    exerciseId = "ex_bench",
+                    weight = 85.0,
+                    reps = 6,
+                    restSeconds = 90,
+                    orderIndex = 2
+                )
+            )
+            override suspend fun create(set: com.example.domain.model.ExerciseSet) = Result.success(set)
+            override suspend fun update(set: com.example.domain.model.ExerciseSet) = Result.success(Unit)
+            override suspend fun delete(id: String) = Result.success(Unit)
+            override fun observeBySession(sessionId: String) = flowOf(sets)
+            override suspend fun getBySession(sessionId: String) = sets
+            override suspend fun getLastHistoryForExercise(exerciseId: String, currentSessionId: String?) = null
+        }
+
+        val useCase = CreatePlanFromHistoryUseCase(
+            exerciseSetRepository = fakeSetRepo,
+            exerciseRepository = exerciseRepository,
+            planRepository = planRepository,
+            idGenerator = idGenerator,
+            wallClock = fixedClock
+        )
+
+        val plan = useCase("past_session_aba").getOrThrow()
+
+        assertEquals(3, plan.exercises.size)
+        assertEquals(listOf("ex_bench", "ex_squat", "ex_bench"), plan.exercises.map { it.exerciseId })
+        assertEquals(listOf(0, 1, 2), plan.exercises.map { it.orderIndex })
+        assertTrue(plan.exercises.map { it.id }.distinct().size == 3)
+
+        val firstBench = plan.exercises[0].plannedSets.single().targetMeasurement as MeasurementValue.WeightAndReps
+        val squat = plan.exercises[1].plannedSets.single().targetMeasurement as MeasurementValue.WeightAndReps
+        val secondBench = plan.exercises[2].plannedSets.single().targetMeasurement as MeasurementValue.WeightAndReps
+        assertEquals(80.0, firstBench.weightKg, 0.001)
+        assertEquals(120.0, squat.weightKg, 0.001)
+        assertEquals(85.0, secondBench.weightKg, 0.001)
+        assertEquals(120, plan.exercises[0].plannedSets.single().targetRestSeconds)
+        assertFalse(plan.exercises.any { exercise -> exercise.plannedSets.any { it.isCompleted } })
+    }
+
+    @Test
+    fun `PLAN-05 empty past session fails closed and missing exercise falls back to WeightAndReps`() = runTest {
+        val emptyRepo = object : com.example.domain.repository.ExerciseSetRepository {
+            override suspend fun create(set: com.example.domain.model.ExerciseSet) = Result.success(set)
+            override suspend fun update(set: com.example.domain.model.ExerciseSet) = Result.success(Unit)
+            override suspend fun delete(id: String) = Result.success(Unit)
+            override fun observeBySession(sessionId: String) = flowOf(emptyList<com.example.domain.model.ExerciseSet>())
+            override suspend fun getBySession(sessionId: String) = emptyList<com.example.domain.model.ExerciseSet>()
+            override suspend fun getLastHistoryForExercise(exerciseId: String, currentSessionId: String?) = null
+        }
+        val emptyUseCase = CreatePlanFromHistoryUseCase(
+            exerciseSetRepository = emptyRepo,
+            exerciseRepository = exerciseRepository,
+            planRepository = planRepository,
+            idGenerator = idGenerator,
+            wallClock = fixedClock
+        )
+        val emptyResult = emptyUseCase("missing_session")
+        assertTrue(emptyResult.isFailure)
+        assertTrue(emptyResult.exceptionOrNull()?.message?.contains("No past sets") == true)
+        assertTrue(planRepository.plans.isEmpty())
+
+        val unknownExerciseRepo = object : com.example.domain.repository.ExerciseSetRepository {
+            val sets = listOf(
+                com.example.domain.model.ExerciseSet(
+                    id = "s1",
+                    sessionId = "past_unknown",
+                    exerciseId = "ex_deleted",
+                    weight = 42.5,
+                    reps = 7,
+                    orderIndex = 0
+                )
+            )
+            override suspend fun create(set: com.example.domain.model.ExerciseSet) = Result.success(set)
+            override suspend fun update(set: com.example.domain.model.ExerciseSet) = Result.success(Unit)
+            override suspend fun delete(id: String) = Result.success(Unit)
+            override fun observeBySession(sessionId: String) = flowOf(sets)
+            override suspend fun getBySession(sessionId: String) = sets
+            override suspend fun getLastHistoryForExercise(exerciseId: String, currentSessionId: String?) = null
+        }
+        val fallbackUseCase = CreatePlanFromHistoryUseCase(
+            exerciseSetRepository = unknownExerciseRepo,
+            exerciseRepository = exerciseRepository,
+            planRepository = planRepository,
+            idGenerator = idGenerator,
+            wallClock = fixedClock
+        )
+        val plan = fallbackUseCase("past_unknown").getOrThrow()
+        assertEquals("Exercise ex_deleted", plan.exercises.single().exerciseName)
+        val target = plan.exercises.single().plannedSets.single().targetMeasurement as MeasurementValue.WeightAndReps
+        assertEquals(42.5, target.weightKg, 0.001)
+        assertEquals(7, target.reps)
+        assertFalse(plan.isConfirmed)
+    }
 }

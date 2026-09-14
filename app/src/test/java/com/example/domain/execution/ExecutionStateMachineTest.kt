@@ -252,6 +252,53 @@ class ExecutionStateMachineTest {
         assertEquals(SetExecutionState.Ready, sm.currentState)
     }
 
+    @Test
+    fun `completeSet rejects completion time before start and negative duration`() {
+        val sm = ExecutionStateMachine()
+        sm.startSet(startEpochMs = 10000L, startMonotonicMs = 10000L)
+
+        assertFalse(sm.completeSet(completionEpochMs = 9999L, durationSeconds = 1))
+        assertTrue(sm.currentState is SetExecutionState.Performing)
+
+        assertFalse(sm.completeSet(completionEpochMs = 20000L, durationSeconds = -1))
+        assertTrue(sm.currentState is SetExecutionState.Performing)
+    }
+
+    @Test
+    fun `undo from Ready is rejected`() {
+        val sm = ExecutionStateMachine()
+        assertFalse(sm.undo())
+        assertEquals(SetExecutionState.Ready, sm.currentState)
+    }
+
+    @Test
+    fun `finishSession is rejected while a set is performing`() {
+        val controller = SessionExecutionController(baseExecution())
+        controller.setMachine().startSet(10_000L, 10_000L)
+
+        val result = controller.finishSession(50_000L)
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("performing") == true)
+        assertEquals(SessionExecutionState.ACTIVE, controller.current.sessionState)
+        assertTrue(controller.current.setState is SetExecutionState.Performing)
+        assertEquals(null, controller.current.completedAtEpochMs)
+    }
+
+    @Test
+    fun `finishSession is allowed from AwaitingConfirmation`() {
+        val controller = SessionExecutionController(baseExecution())
+        controller.setMachine().startSet(10_000L, 10_000L)
+        controller.setMachine().completeSet(40_000L, 30)
+
+        val result = controller.finishSession(50_000L)
+
+        assertTrue(result.isSuccess)
+        assertEquals(SessionExecutionState.COMPLETED, result.getOrThrow().sessionState)
+        assertEquals(50_000L, result.getOrThrow().completedAtEpochMs)
+        assertTrue(result.getOrThrow().setState is SetExecutionState.AwaitingConfirmation)
+    }
+
     private fun baseExecution() = WorkoutExecution(
         sessionId = "sess_1",
         planId = "plan_1",
