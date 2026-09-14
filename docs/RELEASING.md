@@ -24,5 +24,10 @@ Korean translation: [ko/RELEASING.md](ko/RELEASING.md)
    ```
 5. **Build Release APK/AAB**:
    ```bash
+   export KEYSTORE_PATH=/path/to/upload.jks   # default: ${rootDir}/my-upload-key.jks
+   export STORE_PASSWORD=...
+   export KEY_PASSWORD=...                    # alias is `upload`
    ./gradlew bundleRelease
    ```
+
+   Debug builds use gitignored `${rootDir}/debug.keystore`. See [DEVELOPMENT.md](DEVELOPMENT.md) for JDK, secrets, and Firebase (`google-services.json` is optional; missing file is a Gradle warning).

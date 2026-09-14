@@ -11,7 +11,7 @@
 **Liftory**는 헬스 및 스트렝스 트레이닝을 기록하고 점진적 과부하를 추적할 수 있도록 설계된 안드로이드 애플리케이션입니다. 인터넷 연결이 원활하지 않은 헬스장 환경에서도 안정적인 오프라인 우선 경험을 제공하며, 선택적으로 클라우드 동기화를 지원합니다.
 
 - **오프라인 우선 (Offline-First)**: 로컬 DB(Room) 기반으로 완전한 오프라인 사용성과 데이터 안정성 보장.
-- **클린 아키텍처 (Clean Architecture)**: Domain, Data, Presentation 레이어가 명확히 분리된 테스트 가능하고 유지보수하기 쉬운 구조.
+- **클린 아키텍처 (Clean Architecture)**: Presentation → Application → Domain ← Infrastructure (Jetpack Compose + MVVM). Room이 소스 오브 트루스이며 Firestore 동기화는 최선 노력입니다.
 - **AI 기반 인사이트**: Gemini API 연동을 통한 운동 피드백 및 루틴 제안 기능.
 
 ---
@@ -36,6 +36,9 @@
 | 문서 | 한국어 (KO) | 영문 (EN) | 설명 |
 | :--- | :--- | :--- | :--- |
 | **문서 목차** | [docs/ko/README.md](docs/ko/README.md) | [docs/README.md](docs/README.md) | 전체 공개 문서 맵 |
+| **아키텍처** | [docs/ko/ARCHITECTURE.md](docs/ko/ARCHITECTURE.md) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 계층, DI, Room, 동기화 |
+| **도메인 API** | [docs/ko/DOMAIN.md](docs/ko/DOMAIN.md) | [docs/DOMAIN.md](docs/DOMAIN.md) | 실행 상태 머신, 타이머, 통계, 도메인 서비스 |
+| **개발 환경** | [docs/ko/DEVELOPMENT.md](docs/ko/DEVELOPMENT.md) | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 빌드, 시크릿, 문제 해결 |
 | **변경 이력** | [docs/ko/CHANGELOG.md](docs/ko/CHANGELOG.md) | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 버전별 변경 사항 및 Unreleased |
 | **UI/UX 개요** | [docs/ko/UI_UX_OVERVIEW.md](docs/ko/UI_UX_OVERVIEW.md) | [docs/UI_UX_OVERVIEW.md](docs/UI_UX_OVERVIEW.md) | 화면 갤러리 및 UX 평가 가이드 |
 | **기여 가이드** | [docs/ko/CONTRIBUTING.md](docs/ko/CONTRIBUTING.md) | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | 기여 및 PR 규칙 |
@@ -46,8 +49,8 @@
 
 ## 기술 스택
 
-- **플랫폼**: Android (Min SDK 24, Target SDK 36)
-- **언어**: Kotlin 2.x
+- **플랫폼**: Android (Min SDK 24, Target SDK 36, JDK 21)
+- **언어**: Kotlin 2.0
 - **UI**: Jetpack Compose, Material 3
 - **아키텍처**: MVVM / Clean Architecture
 - **백엔드/서비스**: Firebase (Firestore, Auth), Google Cloud
@@ -56,9 +59,11 @@
 
 ## 시작하기
 
+**JDK 21**이 필요합니다. 전체 설정, 서명, 문제 해결은 [docs/ko/DEVELOPMENT.md](docs/ko/DEVELOPMENT.md)를 참고하세요.
+
 1. 저장소 복제:
    ```bash
-   git clone https://github.com/your-username/Liftory.git
+   git clone https://github.com/s4ngwoo/Liftory.git
    ```
 2. 환경 변수 및 설정 파일 준비:
    ```bash
@@ -68,6 +73,8 @@
    ```bash
    ./gradlew assembleDebug
    ```
+
+`google-services.json`은 선택입니다 (없으면 Gradle 경고). Firebase 로그인/동기화는 비활성으로 남고, 로컬 Room 기록은 그대로 동작합니다.
 
 ---
 

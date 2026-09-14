@@ -11,7 +11,7 @@
 **Liftory** is an Android application designed for fitness enthusiasts and athletes to log strength training sessions seamlessly, visualize progress, and manage routines offline-first with Cloud Firestore sync capabilities.
 
 - **Offline-First**: Built with local database caching (Room / Local Storage) ensuring complete privacy and offline usability in gyms without stable connection.
-- **Clean Architecture**: Separated into Domain, Data, and Presentation layers using Jetpack Compose and Modern Android Architecture.
+- **Clean Architecture**: Presentation → Application → Domain ← Infrastructure (Jetpack Compose + MVVM). Room is the source of truth; Firestore sync is best-effort.
 - **AI-Powered Insights**: Integrated Gemini API assistance for routine suggestions and workout log analysis.
 
 ---
@@ -36,6 +36,9 @@ All public project documentation is maintained in [`docs/`](docs/README.md):
 | Document | English | 한국어 (Korean) | Description |
 | :--- | :--- | :--- | :--- |
 | **Documentation Index** | [docs/README.md](docs/README.md) | [docs/ko/README.md](docs/ko/README.md) | Documentation map |
+| **Architecture** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | [docs/ko/ARCHITECTURE.md](docs/ko/ARCHITECTURE.md) | Layers, DI, Room, sync |
+| **Domain APIs** | [docs/DOMAIN.md](docs/DOMAIN.md) | [docs/ko/DOMAIN.md](docs/ko/DOMAIN.md) | Execution, timer, stats, domain services |
+| **Development setup** | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | [docs/ko/DEVELOPMENT.md](docs/ko/DEVELOPMENT.md) | Build, secrets, troubleshooting |
 | **Changelog** | [docs/CHANGELOG.md](docs/CHANGELOG.md) | [docs/ko/CHANGELOG.md](docs/ko/CHANGELOG.md) | Version history & changes |
 | **UI/UX Overview** | [docs/UI_UX_OVERVIEW.md](docs/UI_UX_OVERVIEW.md) | [docs/ko/UI_UX_OVERVIEW.md](docs/ko/UI_UX_OVERVIEW.md) | Screen gallery & UX evaluation |
 | **Contributing** | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | [docs/ko/CONTRIBUTING.md](docs/ko/CONTRIBUTING.md) | Contribution guidelines |
@@ -46,8 +49,8 @@ All public project documentation is maintained in [`docs/`](docs/README.md):
 
 ## Tech Stack
 
-- **Platform**: Android (Min SDK 24, Target SDK 36)
-- **Language**: Kotlin 2.x
+- **Platform**: Android (Min SDK 24, Target SDK 36, JDK 21)
+- **Language**: Kotlin 2.0
 - **UI**: Jetpack Compose, Material 3
 - **Architecture**: MVVM / Clean Architecture
 - **Backend / Services**: Google Cloud / Firebase (Firestore, Auth)
@@ -56,9 +59,11 @@ All public project documentation is maintained in [`docs/`](docs/README.md):
 
 ## Getting Started
 
+Requires **JDK 21**. Full setup, signing, and troubleshooting: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/Liftory.git
+   git clone https://github.com/s4ngwoo/Liftory.git
    ```
 2. Set up environment variables and keys:
    ```bash
@@ -68,6 +73,8 @@ All public project documentation is maintained in [`docs/`](docs/README.md):
    ```bash
    ./gradlew assembleDebug
    ```
+
+`google-services.json` is optional (Gradle warns if missing). Firebase login/sync then stay disabled; local Room logging still works.
 
 ---
 

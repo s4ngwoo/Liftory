@@ -11,6 +11,7 @@
 
 ## [Unreleased]
 
+- 개발자 아키텍처 맵: `docs/ARCHITECTURE.md`, `docs/DOMAIN.md`, `docs/DEVELOPMENT.md` 및 `docs/ko/` 미러 추가. 계층 규칙, Room vs 인메모리 배선, 동기화/타이머/실행 계약, 환경 설정 및 문제 해결을 정리.
 - 신규 아키텍처 및 도메인 코어 (N00~N16 전 페이즈 완수):
   - 실행 상태 머신: `SetExecutionState`, `SessionExecutionState` 및 멱등 command ID 기반 상태 전이 엔진 구축 (EXEC-01~10).
   - 영속 휴식 및 세션 타이머: Monotonic/Wall 시계 분리와 배터리 친화적 passive projection `TimerCalculator` 구현 (TIME-01~08).
