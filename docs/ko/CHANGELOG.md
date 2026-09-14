@@ -77,5 +77,6 @@
 - 포그라운드 서비스 권한 안정화: Android 14+ / Android 16에서 하드웨어 센서 권한 없이 `health` 타입 시작 시 발생하던 `SecurityException`을 해결하기 위해 `specialUse` 타입으로 전환.
 
 ### 수정됨 (Fixed)
+- `getActiveSession()`이 여분의 진행 중 세션에 추정 `endTime`을 몰래 쓰지 않도록 읽기 전용으로 되돌림 (CSV 복원·더블탭 중복). 세션 생성은 Room 쓰기 트랜잭션 안에서 활성 세션 여부를 다시 확인해 동시에 두 번째 `endTime IS NULL` 행이 들어가지 않게 함.
 - 세트 입력창에서 숫자 패드 엔터 클릭 시 줄바꿈이 되던 현상을 `singleLine = true`, `ImeAction.Next`/`Done`, `FocusRequester`로 해결.
 - 키보드가 올라올 때 세트 입력 필드가 화면 밑으로 잘려 보이지 않던 문제를 가로 3열 컴팩트 배치(`Row`, 높이 64dp), `skipPartiallyExpanded = true` 및 `verticalScroll`을 적용하여 100% 가림 없는 시각적 노출로 완벽 해결.

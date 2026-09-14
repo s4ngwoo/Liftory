@@ -1,6 +1,7 @@
 package com.example.infrastructure.repository
 
 import androidx.room.withTransaction
+import com.example.domain.exception.ActiveSessionAlreadyExistsException
 import com.example.domain.model.EntityType
 import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
@@ -32,6 +33,12 @@ class WorkoutSessionRepositoryImpl(
     override suspend fun create(session: WorkoutSession): Result<WorkoutSession> = withContext(ioDispatcher) {
         runCatching {
             db.withTransaction {
+                if (session.endTime == null) {
+                    val existingActive = sessionDao.getActiveSessions()
+                    if (existingActive.isNotEmpty()) {
+                        throw ActiveSessionAlreadyExistsException(existingActive.first().toDomain())
+                    }
+                }
                 sessionDao.insert(session.toEntity())
                 val pending = PendingUpload(
                     id = UUID.randomUUID().toString(),
@@ -96,25 +103,7 @@ class WorkoutSessionRepositoryImpl(
     }
 
     override suspend fun getActiveSession(): WorkoutSession? = withContext(ioDispatcher) {
-        val activeEntities = sessionDao.getActiveSessions()
-        if (activeEntities.isEmpty()) return@withContext null
-
-        if (activeEntities.size > 1) {
-            val keepActive = activeEntities.first()
-            val now = System.currentTimeMillis()
-            for (i in 1 until activeEntities.size) {
-                val older = activeEntities[i]
-                val closeTime = if (older.updatedAt > older.startTime) older.updatedAt else older.startTime + 3600000L
-                val closed = older.copy(
-                    endTime = closeTime,
-                    updatedAt = now
-                )
-                sessionDao.update(closed)
-            }
-            keepActive.toDomain()
-        } else {
-            activeEntities.first().toDomain()
-        }
+        sessionDao.getActiveSession()?.toDomain()
     }
 
     override suspend fun getActiveSessions(): List<WorkoutSession> = withContext(ioDispatcher) {

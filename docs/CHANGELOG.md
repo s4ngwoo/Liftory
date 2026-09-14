@@ -78,5 +78,6 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 - Foreground Service: Migrated Android 14+ FGS type from `health` to `specialUse` to prevent `SecurityException` when running without hardware sensor permissions.
 
 ### Fixed
+- `getActiveSession()` no longer silently writes fabricated `endTime` values onto extra in-progress sessions (CSV restore / double-tap duplicates). Creating a session now re-checks the active-session invariant inside the Room write transaction so a concurrent start cannot insert a second `endTime IS NULL` row.
 - Fixed software keyboard Enter key inserting newlines instead of jumping to the next input field.
 - Fixed `ExerciseSetEditorSheet` input field being pushed off-screen/hidden beneath the keyboard by adopting a compact horizontal 3-column row (64dp height), `skipPartiallyExpanded = true`, and vertical scrolling.
