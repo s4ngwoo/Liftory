@@ -24,5 +24,10 @@
    ```
 5. **릴리즈 패키지 빌드**:
    ```bash
+   export KEYSTORE_PATH=/path/to/upload.jks   # 기본값: ${rootDir}/my-upload-key.jks
+   export STORE_PASSWORD=...
+   export KEY_PASSWORD=...                    # alias는 `upload`
    ./gradlew bundleRelease
    ```
+
+   디버그 빌드는 gitignore된 `${rootDir}/debug.keystore`를 사용합니다. JDK, 시크릿, Firebase(`google-services.json`은 선택이며 없으면 Gradle 경고)는 [DEVELOPMENT.md](DEVELOPMENT.md)를 참고하세요.

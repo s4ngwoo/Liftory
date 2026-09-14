@@ -11,6 +11,7 @@ Korean translation: [ko/CHANGELOG.md](ko/CHANGELOG.md)
 
 ## [Unreleased]
 
+- Developer architecture map: added `docs/ARCHITECTURE.md`, `docs/DOMAIN.md`, and `docs/DEVELOPMENT.md` (with `docs/ko/` mirrors) covering layer rules, Room vs in-memory wiring, sync/timer/execution contracts, setup, and troubleshooting.
 - New Architecture & Domain Core (N00~N16):
   - Execution State Machine: Defined `SetExecutionState` and `SessionExecutionState` with command ID idempotency and expected revision gating (EXEC-01~10).
   - Persistent Rest & Session Timer: Implemented `TimerCalculator` over `RestTarget` with monotonic/wall clock decoupling and battery-friendly passive projections (TIME-01~08).
