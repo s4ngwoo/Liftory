@@ -252,6 +252,100 @@ class ExecutionStateMachineTest {
         assertEquals(SetExecutionState.Ready, sm.currentState)
     }
 
+    @Test
+    fun `skip from Ready marks the set skipped without inventing timestamps`() {
+        val sm = ExecutionStateMachine()
+        assertTrue(sm.skip())
+        assertEquals(SetExecutionState.Skipped, sm.currentState)
+    }
+
+    @Test
+    fun `skip from Performing is rejected and leaves the start timestamps intact`() {
+        val sm = ExecutionStateMachine()
+        sm.startSet(startEpochMs = 10_000L, startMonotonicMs = 10_000L)
+
+        assertFalse(sm.skip())
+        val performing = sm.currentState as SetExecutionState.Performing
+        assertEquals(10_000L, performing.startedAtEpochMs)
+    }
+
+    @Test
+    fun `rejected command does not consume command id so the same id can retry`() {
+        val runner = ExecutionCommandRunner()
+        val sm = ExecutionStateMachine()
+
+        val rejected = runner.runCommand("cmd_complete", expectedRevision = 1) {
+            sm.completeSet(completionEpochMs = 40_000L, durationSeconds = 30)
+        }
+        assertTrue(rejected.isFailure)
+        assertEquals(1L, runner.currentRevision)
+        assertFalse(runner.hasExecuted("cmd_complete"))
+
+        sm.startSet(startEpochMs = 10_000L, startMonotonicMs = 10_000L)
+        val retried = runner.runCommand("cmd_complete", expectedRevision = 1) {
+            sm.completeSet(completionEpochMs = 40_000L, durationSeconds = 30)
+        }
+        assertTrue(retried.isSuccess)
+        assertEquals(2L, runner.currentRevision)
+        assertTrue(runner.hasExecuted("cmd_complete"))
+        assertTrue(sm.currentState is SetExecutionState.AwaitingConfirmation)
+    }
+
+    @Test
+    fun `PEEK_ONLY switch does not move the execution target`() {
+        val controller = SessionExecutionController(baseExecution())
+        val result = controller.switchExercise(
+            targetExerciseIndex = 1,
+            disposition = InProgressSetDisposition.PEEK_ONLY
+        )
+        assertTrue(result.isSuccess)
+        assertEquals(0, result.getOrThrow().currentExerciseIndex)
+        assertEquals(SetExecutionState.Ready, result.getOrThrow().setState)
+    }
+
+    @Test
+    fun `switchExercise on a completed session is rejected`() {
+        val controller = SessionExecutionController(
+            baseExecution().copy(
+                sessionState = SessionExecutionState.COMPLETED,
+                completedAtEpochMs = 200_000L
+            )
+        )
+        val result = controller.switchExercise(
+            targetExerciseIndex = 1,
+            disposition = InProgressSetDisposition.SKIP_REMAINING
+        )
+        assertTrue(result.isFailure)
+        assertEquals(0, controller.current.currentExerciseIndex)
+        assertEquals(SessionExecutionState.COMPLETED, controller.current.sessionState)
+    }
+
+    @Test
+    fun `amendCompletedRecord on an active session is rejected`() {
+        val controller = SessionExecutionController(baseExecution())
+        val result = controller.amendCompletedRecord(
+            exerciseIndex = 0,
+            setIndex = 0,
+            newMeasurement = MeasurementValue.WeightAndReps(82.5, 10)
+        )
+        assertTrue(result.isFailure)
+        assertTrue(controller.current.confirmedRecords.isEmpty())
+    }
+
+    @Test
+    fun `finishSession on an already completed execution keeps the original end time`() {
+        val controller = SessionExecutionController(
+            baseExecution().copy(
+                sessionState = SessionExecutionState.COMPLETED,
+                completedAtEpochMs = 200_000L
+            )
+        )
+        val result = controller.finishSession(completedAtEpochMs = 999_000L)
+        assertTrue(result.isSuccess)
+        assertEquals(200_000L, result.getOrThrow().completedAtEpochMs)
+        assertEquals(SessionExecutionState.COMPLETED, result.getOrThrow().sessionState)
+    }
+
     private fun baseExecution() = WorkoutExecution(
         sessionId = "sess_1",
         planId = "plan_1",

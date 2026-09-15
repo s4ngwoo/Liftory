@@ -73,6 +73,26 @@ class MeasurementProfileTest {
     }
 
     @Test
+    fun `known treadmill cardio maps minutes to TimeAndLevel seconds`() {
+        val exercise = Exercise(
+            id = "ex_treadmill",
+            name = "트레드밀",
+            muscleGroup = "Cardio",
+            equipmentType = EquipmentType.CARDIO
+        )
+
+        val measurement = LegacyMeasurementMapper.toMeasurement(
+            exercise = exercise,
+            weight = 6.5,
+            reps = 20
+        )
+
+        val cardio = measurement as MeasurementValue.TimeAndLevel
+        assertEquals(20 * 60, cardio.durationSeconds)
+        assertEquals(6.5, cardio.levelOrSpeed, 0.001)
+    }
+
+    @Test
     fun `stretching exercise maps to TimedHold with side support`() {
         val stretchingExercise = Exercise(
             id = "ex_stretch_hamstring",

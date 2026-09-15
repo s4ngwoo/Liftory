@@ -1,11 +1,13 @@
 package com.example.infrastructure
 
 import com.example.domain.model.EntityType
+import com.example.domain.model.EquipmentType
 import com.example.domain.model.Exercise
 import com.example.domain.model.ExerciseSet
 import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.model.WorkoutSession
+import com.example.infrastructure.db.entity.ExerciseEntity
 import com.example.infrastructure.db.mapper.toDomain
 import com.example.infrastructure.db.mapper.toEntity
 import org.junit.Assert.assertEquals
@@ -54,6 +56,43 @@ class EntityMappersTest {
         assertEquals(domain, restored)
         assertEquals(false, restored.isCompleted)
         assertEquals(8, restored.targetReps)
+    }
+
+    @Test
+    fun exercise_mappingRoundTrip_preservesKnownEquipmentType() {
+        val domain = Exercise(
+            id = "ex_treadmill",
+            name = "트레드밀",
+            isCustom = false,
+            muscleGroup = "Cardio",
+            equipmentType = EquipmentType.CARDIO,
+            machineBrand = "StairMaster",
+            createdAt = 1000L,
+            updatedAt = 2000L
+        )
+
+        val restored = domain.toEntity().toDomain()
+        assertEquals(domain, restored)
+        assertEquals(EquipmentType.CARDIO, restored.equipmentType)
+    }
+
+    @Test
+    fun exercise_unknownEquipmentType_fallsBackToFreeWeight() {
+        val entity = ExerciseEntity(
+            id = "ex_future",
+            name = "Future Cable",
+            isCustom = true,
+            muscleGroup = "Back",
+            equipmentType = "CABLE_FUTURE",
+            machineBrand = null,
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+
+        val domain = entity.toDomain()
+        assertEquals(EquipmentType.FREE_WEIGHT, domain.equipmentType)
+        assertEquals("Future Cable", domain.name)
+        assertEquals(true, domain.isCustom)
     }
 
     @Test
