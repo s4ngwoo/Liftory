@@ -39,6 +39,12 @@ object SyncConflictResolver {
     }
 }
 
+object SyncOutboxOwnerGate {
+    fun canPush(pendingUserId: String, currentUserId: String?): Boolean {
+        return !currentUserId.isNullOrBlank() && pendingUserId == currentUserId
+    }
+}
+
 class InMemorySyncOutbox {
     private val queuesByUser = mutableMapOf<String, MutableList<PendingUpload>>()
 

@@ -60,6 +60,7 @@ class EntityMappersTest {
     fun pendingUpload_mappingRoundTrip_preservesAllFields() {
         val domain = PendingUpload(
             id = "upload-1",
+            userId = "user-42",
             entityType = EntityType.SESSION,
             entityId = "sess-1",
             operation = SyncOperation.CREATE,
@@ -69,5 +70,6 @@ class EntityMappersTest {
         val entity = domain.toEntity()
         val restored = entity.toDomain()
         assertEquals(domain, restored)
+        assertEquals("user-42", restored.userId)
     }
 }

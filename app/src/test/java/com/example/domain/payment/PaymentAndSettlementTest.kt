@@ -67,6 +67,37 @@ class PaymentAndSettlementTest {
     }
 
     @Test
+    fun `PAY-04 delayed approval webhook cannot resurrect refunded order`() {
+        val service = PaymentProcessingService()
+        service.createOrder("ord_refunded", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+        service.handleApprovalWebhook("hook_approve", "ord_refunded")
+        val refundResult = service.refund("ord_refunded", 100_000L)
+        assertTrue(refundResult.isSuccess)
+        assertEquals(PaymentStatus.REFUNDED, service.getOrder("ord_refunded")?.status)
+        assertEquals(100_000L, service.getOrder("ord_refunded")?.refundedAmountWon)
+
+        val delayedApproval = service.handleApprovalWebhook("hook_delayed_new_event", "ord_refunded")
+        assertFalse("Refunded order cannot be revived by delayed approval", delayedApproval.isSuccess)
+        assertEquals(PaymentStatus.REFUNDED, service.getOrder("ord_refunded")?.status)
+        assertEquals(100_000L, service.getOrder("ord_refunded")?.refundedAmountWon)
+    }
+
+    @Test
+    fun `PAY-04 delayed approval webhook cannot resurrect partially refunded order`() {
+        val service = PaymentProcessingService()
+        service.createOrder("ord_partial", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+        service.handleApprovalWebhook("hook_approve_partial", "ord_partial")
+        val refundResult = service.refund("ord_partial", 40_000L)
+        assertTrue(refundResult.isSuccess)
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, service.getOrder("ord_partial")?.status)
+
+        val delayedApproval = service.handleApprovalWebhook("hook_delayed_partial", "ord_partial")
+        assertFalse("Partially refunded order cannot be revived by delayed approval", delayedApproval.isSuccess)
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, service.getOrder("ord_partial")?.status)
+        assertEquals(40_000L, service.getOrder("ord_partial")?.refundedAmountWon)
+    }
+
+    @Test
     fun `PAY-06 partial refund prevents total refund exceeding original payment amount`() {
         val service = PaymentProcessingService()
         service.createOrder("ord_refund", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
@@ -86,6 +117,33 @@ class PaymentAndSettlementTest {
         val refund3 = service.refund("ord_refund", 60_000L)
         assertTrue(refund3.isSuccess)
         assertEquals(PaymentStatus.REFUNDED, service.getOrder("ord_refund")?.status)
+    }
+
+    @Test
+    fun `PAY-06 refund is rejected on unpaid cancelled or negative amounts`() {
+        val service = PaymentProcessingService()
+        service.createOrder("ord_pending", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+
+        val pendingRefund = service.refund("ord_pending", 100_000L)
+        assertFalse("Unpaid PENDING order must not be refundable", pendingRefund.isSuccess)
+        assertEquals("Refund requires a captured payment", pendingRefund.errorMessage)
+        assertEquals(PaymentStatus.PENDING, service.getOrder("ord_pending")?.status)
+        assertEquals(0L, service.getOrder("ord_pending")?.refundedAmountWon)
+
+        service.createOrder("ord_cancel", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+        service.cancelOrder("ord_cancel")
+        val cancelledRefund = service.refund("ord_cancel", 50_000L)
+        assertFalse("Cancelled order must not be refundable", cancelledRefund.isSuccess)
+        assertEquals("Refund requires a captured payment", cancelledRefund.errorMessage)
+        assertEquals(PaymentStatus.CANCELLED, service.getOrder("ord_cancel")?.status)
+
+        service.createOrder("ord_neg", "u1", "fac_A", "plan_1", 100_000L, 100_000L)
+        service.handleApprovalWebhook("hook_neg", "ord_neg")
+        val negativeRefund = service.refund("ord_neg", -1_000L)
+        assertFalse("Negative refund must not increase remaining balance", negativeRefund.isSuccess)
+        assertEquals("Refund amount must be positive", negativeRefund.errorMessage)
+        assertEquals(0L, service.getOrder("ord_neg")?.refundedAmountWon)
+        assertEquals(PaymentStatus.APPROVED, service.getOrder("ord_neg")?.status)
     }
 
     @Test

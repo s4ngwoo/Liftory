@@ -23,8 +23,8 @@ class FakeSyncQueueRepository : SyncQueueRepository {
         return Result.success(Unit)
     }
 
-    override suspend fun getNextPending(limit: Int): List<PendingUpload> {
-        return queue.take(limit)
+    override suspend fun getNextPending(userId: String, limit: Int): List<PendingUpload> {
+        return queue.filter { it.userId == userId }.take(limit)
     }
 
     override suspend fun markCompleted(id: String): Result<Unit> {
@@ -75,6 +75,7 @@ class SyncPipelineLogicTest {
     fun `when remote sync succeeds, item should be removed from queue and marked completed`() = runTest {
         val upload = PendingUpload(
             id = "upload_1",
+            userId = "user_1",
             entityType = EntityType.SESSION,
             entityId = "session_1",
             operation = SyncOperation.CREATE,
@@ -82,7 +83,7 @@ class SyncPipelineLogicTest {
         )
         syncQueueRepository.enqueue(upload)
 
-        val pending = syncQueueRepository.getNextPending(10).first()
+        val pending = syncQueueRepository.getNextPending("user_1", 10).first()
         val result = remoteSyncDataSource.sync(pending)
 
         assertTrue(result.isSuccess)
@@ -97,6 +98,7 @@ class SyncPipelineLogicTest {
     fun `when remote sync fails, retryCount should be incremented and error message recorded`() = runTest {
         val upload = PendingUpload(
             id = "upload_2",
+            userId = "user_1",
             entityType = EntityType.SET,
             entityId = "set_1",
             operation = SyncOperation.UPDATE,
@@ -105,7 +107,7 @@ class SyncPipelineLogicTest {
         syncQueueRepository.enqueue(upload)
         remoteSyncDataSource.shouldFail = true
 
-        val pending = syncQueueRepository.getNextPending(10).first()
+        val pending = syncQueueRepository.getNextPending("user_1", 10).first()
         val result = remoteSyncDataSource.sync(pending)
 
         assertTrue(result.isFailure)
@@ -115,5 +117,34 @@ class SyncPipelineLogicTest {
         val failureRecord = syncQueueRepository.failedItems["upload_2"]
         assertEquals(1, failureRecord?.first)
         assertEquals("Network error", failureRecord?.second)
+    }
+
+    @Test
+    fun `account switch dequeues only the current user's outbox items`() = runTest {
+        syncQueueRepository.enqueue(
+            PendingUpload(
+                id = "upload_a",
+                userId = "user_A",
+                entityType = EntityType.SESSION,
+                entityId = "session_a",
+                operation = SyncOperation.CREATE,
+                payloadJson = """{"notes":"secret A"}"""
+            )
+        )
+        syncQueueRepository.enqueue(
+            PendingUpload(
+                id = "upload_b",
+                userId = "user_B",
+                entityType = EntityType.SESSION,
+                entityId = "session_b",
+                operation = SyncOperation.CREATE,
+                payloadJson = """{"notes":"B workout"}"""
+            )
+        )
+
+        val pendingForB = syncQueueRepository.getNextPending("user_B", 20)
+        assertEquals(1, pendingForB.size)
+        assertEquals("upload_b", pendingForB[0].id)
+        assertTrue(pendingForB.none { it.userId == "user_A" })
     }
 }

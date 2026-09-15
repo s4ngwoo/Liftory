@@ -2,13 +2,13 @@ package com.example.infrastructure.repository
 
 import androidx.room.withTransaction
 import com.example.domain.model.EntityType
-import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.model.WorkoutSession
 import com.example.domain.repository.WorkoutSessionRepository
 import com.example.infrastructure.db.StrengthLogDatabase
 import com.example.infrastructure.db.mapper.toDomain
 import com.example.infrastructure.db.mapper.toEntity
+import com.example.infrastructure.sync.enqueueOwnedBy
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineDispatcher
@@ -16,10 +16,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 class WorkoutSessionRepositoryImpl(
     private val db: StrengthLogDatabase,
+    private val currentUserId: () -> String?,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : WorkoutSessionRepository {
 
@@ -33,14 +33,13 @@ class WorkoutSessionRepositoryImpl(
         runCatching {
             db.withTransaction {
                 sessionDao.insert(session.toEntity())
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SESSION,
                     entityId = session.id,
                     operation = SyncOperation.CREATE,
                     payloadJson = adapter.toJson(session)
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
             session
         }
@@ -54,14 +53,13 @@ class WorkoutSessionRepositoryImpl(
         runCatching {
             db.withTransaction {
                 sessionDao.update(session.toEntity())
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SESSION,
                     entityId = session.id,
                     operation = SyncOperation.UPDATE,
                     payloadJson = adapter.toJson(session)
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
         }
     }
@@ -71,14 +69,13 @@ class WorkoutSessionRepositoryImpl(
             db.withTransaction {
                 setDao.deleteBySessionId(id)
                 sessionDao.deleteById(id)
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SESSION,
                     entityId = id,
                     operation = SyncOperation.DELETE,
                     payloadJson = "{}"
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
         }
     }

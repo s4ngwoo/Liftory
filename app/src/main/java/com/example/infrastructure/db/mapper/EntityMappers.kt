@@ -87,6 +87,7 @@ fun ExerciseEntity.toDomain(): Exercise = Exercise(
 
 fun PendingUpload.toEntity(): PendingUploadEntity = PendingUploadEntity(
     id = id,
+    userId = userId,
     entityType = entityType.name,
     entityId = entityId,
     operation = operation.name,
@@ -98,6 +99,7 @@ fun PendingUpload.toEntity(): PendingUploadEntity = PendingUploadEntity(
 
 fun PendingUploadEntity.toDomain(): PendingUpload = PendingUpload(
     id = id,
+    userId = userId,
     entityType = runCatching { EntityType.valueOf(entityType) }.getOrDefault(EntityType.SESSION),
     entityId = entityId,
     operation = runCatching { SyncOperation.valueOf(operation) }.getOrDefault(SyncOperation.CREATE),

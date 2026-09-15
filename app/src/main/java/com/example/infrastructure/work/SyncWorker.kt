@@ -5,8 +5,7 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.StrengthLogApplication
-import com.example.domain.repository.RemoteSyncDataSource
-import com.example.domain.repository.SyncQueueRepository
+import com.example.domain.sync.SyncOutboxOwnerGate
 
 class SyncWorker(
     appContext: Context,
@@ -22,9 +21,14 @@ class SyncWorker(
         }
         val syncQueueRepository = app.container.syncQueueRepository
         val remoteSyncDataSource = app.container.remoteSyncDataSource
-        
+        val currentUserId = app.container.authRepository.getCurrentUserId()
+        if (currentUserId.isNullOrBlank()) {
+            Log.d("SyncWorker", "No logged-in user; skipping outbox drain")
+            return Result.success()
+        }
+
         return try {
-            val pendingList = syncQueueRepository.getNextPending(20)
+            val pendingList = syncQueueRepository.getNextPending(currentUserId, 20)
             if (pendingList.isEmpty()) {
                 Log.d("SyncWorker", "No pending items to sync")
                 return Result.success()
@@ -35,6 +39,10 @@ class SyncWorker(
                 // Ignore items with high retry count for now to avoid infinite loops
                 if (pending.retryCount >= 5) {
                     Log.w("SyncWorker", "Skipping item ${pending.id} due to max retries")
+                    continue
+                }
+                if (!SyncOutboxOwnerGate.canPush(pending.userId, currentUserId)) {
+                    Log.w("SyncWorker", "Skipping item ${pending.id}: belongs to ${pending.userId}, current is $currentUserId")
                     continue
                 }
 

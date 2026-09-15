@@ -129,4 +129,49 @@ class DatabaseMigrationTest {
         assertTrue(cursor.isNull(4)) // Default targetReps = null
         cursor.close()
     }
+
+    @Test
+    fun `migration 3 to 4 adds userId to pending uploads preserving existing rows`() {
+        val db = createInMemoryDb()
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS pending_uploads (
+                id TEXT NOT NULL PRIMARY KEY,
+                entityType TEXT NOT NULL,
+                entityId TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                payloadJson TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                retryCount INTEGER NOT NULL,
+                lastError TEXT
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_pending_uploads_createdAt ON pending_uploads(createdAt)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_pending_uploads_retryCount ON pending_uploads(retryCount)")
+        db.execSQL(
+            """
+            INSERT INTO pending_uploads (id, entityType, entityId, operation, payloadJson, createdAt, retryCount, lastError)
+            VALUES ('upload_v3_1', 'SESSION', 'sess_1', 'CREATE', '{"notes":"legacy"}', 1000, 0, NULL)
+            """.trimIndent()
+        )
+
+        StrengthLogDatabase.MIGRATION_3_4.migrate(db)
+
+        val cursor = db.query("SELECT id, userId, payloadJson FROM pending_uploads WHERE id = 'upload_v3_1'")
+        assertTrue(cursor.moveToFirst())
+        assertEquals("upload_v3_1", cursor.getString(0))
+        assertEquals("", cursor.getString(1))
+        assertEquals("""{"notes":"legacy"}""", cursor.getString(2))
+        cursor.close()
+
+        val indexCursor = db.query("PRAGMA index_list('pending_uploads')")
+        val indexNames = mutableListOf<String>()
+        while (indexCursor.moveToNext()) {
+            indexNames.add(indexCursor.getString(indexCursor.getColumnIndexOrThrow("name")))
+        }
+        indexCursor.close()
+        assertTrue(indexNames.contains("index_pending_uploads_userId_createdAt"))
+    }
 }

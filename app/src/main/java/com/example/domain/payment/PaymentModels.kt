@@ -95,8 +95,14 @@ class PaymentProcessingService {
             return PaymentActionResult(true) // Idempotent
         }
         val order = orders[orderId] ?: return PaymentActionResult(false, "Order not found")
-        if (order.status == PaymentStatus.CANCELLED) {
-            return PaymentActionResult(false, "Order was already cancelled")
+        when (order.status) {
+            PaymentStatus.CANCELLED ->
+                return PaymentActionResult(false, "Order was already cancelled")
+            PaymentStatus.REFUNDED ->
+                return PaymentActionResult(false, "Order was already refunded")
+            PaymentStatus.PARTIALLY_REFUNDED ->
+                return PaymentActionResult(false, "Order was already partially refunded")
+            PaymentStatus.PENDING, PaymentStatus.APPROVED -> Unit
         }
 
         processedWebhooks.add(eventId)
@@ -123,6 +129,12 @@ class PaymentProcessingService {
 
     fun refund(orderId: String, refundAmount: Long): PaymentActionResult {
         val order = orders[orderId] ?: return PaymentActionResult(false, "Order not found")
+        if (refundAmount <= 0L) {
+            return PaymentActionResult(false, "Refund amount must be positive")
+        }
+        if (order.status != PaymentStatus.APPROVED && order.status != PaymentStatus.PARTIALLY_REFUNDED) {
+            return PaymentActionResult(false, "Refund requires a captured payment")
+        }
         val remaining = order.amountWon - order.refundedAmountWon
         if (refundAmount > remaining) {
             return PaymentActionResult(false, "Refund amount exceeds remaining refundable balance")

@@ -100,7 +100,7 @@ class DefaultAppContainer(
     override val workoutSessionRepository: WorkoutSessionRepository by lazy {
         WorkoutSessionRepositoryImpl(
             db = database,
-            
+            currentUserId = { authRepository.getCurrentUserId() },
             ioDispatcher = ioDispatcher
         )
     }
@@ -108,7 +108,7 @@ class DefaultAppContainer(
     override val exerciseSetRepository: ExerciseSetRepository by lazy {
         ExerciseSetRepositoryImpl(
             db = database,
-            
+            currentUserId = { authRepository.getCurrentUserId() },
             ioDispatcher = ioDispatcher
         )
     }
@@ -116,6 +116,7 @@ class DefaultAppContainer(
     override val exerciseRepository: ExerciseRepository by lazy {
         ExerciseRepositoryImpl(
             db = database,
+            currentUserId = { authRepository.getCurrentUserId() },
             ioDispatcher = ioDispatcher
         )
     }
@@ -123,6 +124,7 @@ class DefaultAppContainer(
     override val routineTemplateRepository: RoutineTemplateRepository by lazy {
         RoutineTemplateRepositoryImpl(
             database = database,
+            currentUserId = { authRepository.getCurrentUserId() },
             ioDispatcher = ioDispatcher
         )
     }

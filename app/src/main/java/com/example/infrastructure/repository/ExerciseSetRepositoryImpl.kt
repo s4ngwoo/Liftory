@@ -3,12 +3,12 @@ package com.example.infrastructure.repository
 import androidx.room.withTransaction
 import com.example.domain.model.EntityType
 import com.example.domain.model.ExerciseSet
-import com.example.domain.model.PendingUpload
 import com.example.domain.model.SyncOperation
 import com.example.domain.repository.ExerciseSetRepository
 import com.example.infrastructure.db.StrengthLogDatabase
 import com.example.infrastructure.db.mapper.toDomain
 import com.example.infrastructure.db.mapper.toEntity
+import com.example.infrastructure.sync.enqueueOwnedBy
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineDispatcher
@@ -16,10 +16,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 class ExerciseSetRepositoryImpl(
     private val db: StrengthLogDatabase,
+    private val currentUserId: () -> String?,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ExerciseSetRepository {
 
@@ -32,14 +32,13 @@ class ExerciseSetRepositoryImpl(
         runCatching {
             db.withTransaction {
                 setDao.insert(set.toEntity())
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SET,
                     entityId = set.id,
                     operation = SyncOperation.CREATE,
                     payloadJson = adapter.toJson(set)
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
             set
         }
@@ -49,14 +48,13 @@ class ExerciseSetRepositoryImpl(
         runCatching {
             db.withTransaction {
                 setDao.update(set.toEntity())
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SET,
                     entityId = set.id,
                     operation = SyncOperation.UPDATE,
                     payloadJson = adapter.toJson(set)
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
         }
     }
@@ -65,14 +63,13 @@ class ExerciseSetRepositoryImpl(
         runCatching {
             db.withTransaction {
                 setDao.deleteById(id)
-                val pending = PendingUpload(
-                    id = UUID.randomUUID().toString(),
+                pendingUploadDao.enqueueOwnedBy(
+                    userId = currentUserId(),
                     entityType = EntityType.SET,
                     entityId = id,
                     operation = SyncOperation.DELETE,
                     payloadJson = "{}"
                 )
-                pendingUploadDao.insert(pending.toEntity())
             }
         }
     }
