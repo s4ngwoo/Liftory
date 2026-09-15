@@ -372,4 +372,89 @@ class SessionPlanUseCasesTest {
         assertFalse("Planned set from history must remain uncompleted in plan", plannedSet.isCompleted)
         assertTrue(plan.exercises.first().notes.contains("past_session_1"))
     }
+
+    @Test
+    fun `creating plan from missing routine fails closed`() = runTest {
+        val result = createPlanFromRoutineUseCase("routine_missing")
+        assertTrue(result.isFailure)
+        assertTrue(planRepository.plans.isEmpty())
+    }
+
+    @Test
+    fun `missing exercise in routine falls back to WeightAndReps without aborting the plan`() = runTest {
+        val routine = RoutineTemplate(
+            id = "routine_orphan",
+            name = "Orphan Exercise",
+            exercises = listOf(
+                ExercisePreset(exerciseId = "ex_unknown", defaultWeight = 40.0, defaultReps = 12, orderIndex = 0)
+            ),
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        routineRepository.create(routine)
+
+        val plan = createPlanFromRoutineUseCase("routine_orphan").getOrThrow()
+        val target = plan.exercises.single().plannedSets.single().targetMeasurement as MeasurementValue.WeightAndReps
+        assertEquals("Exercise ex_unknown", plan.exercises.single().exerciseName)
+        assertEquals(40.0, target.weightKg, 0.001)
+        assertEquals(12, target.reps)
+        assertFalse(plan.isConfirmed)
+    }
+
+    @Test
+    fun `known cardio preset maps minutes to TimeAndLevel seconds`() = runTest {
+        exerciseRepository.exercises["ex_treadmill"] = Exercise(
+            id = "ex_treadmill",
+            name = "트레드밀",
+            muscleGroup = "Cardio",
+            equipmentType = EquipmentType.CARDIO
+        )
+        val routine = RoutineTemplate(
+            id = "routine_cardio",
+            name = "Cardio Day",
+            exercises = listOf(
+                ExercisePreset(exerciseId = "ex_treadmill", defaultWeight = 6.5, defaultReps = 20, orderIndex = 0)
+            ),
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        routineRepository.create(routine)
+
+        val plan = createPlanFromRoutineUseCase("routine_cardio").getOrThrow()
+        val target = plan.exercises.single().plannedSets.single().targetMeasurement as MeasurementValue.TimeAndLevel
+        assertEquals(20 * 60, target.durationSeconds)
+        assertEquals(6.5, target.levelOrSpeed, 0.001)
+    }
+
+    @Test
+    fun `unknown cardio preset preserves raw values as LegacyUnknown`() = runTest {
+        exerciseRepository.exercises["custom_spin"] = Exercise(
+            id = "custom_spin",
+            name = "Custom Spinner",
+            muscleGroup = "Cardio",
+            equipmentType = EquipmentType.CARDIO
+        )
+        val routine = RoutineTemplate(
+            id = "routine_unknown_cardio",
+            name = "Ambiguous Cardio",
+            exercises = listOf(
+                ExercisePreset(exerciseId = "custom_spin", defaultWeight = 12.0, defaultReps = 30, orderIndex = 0)
+            ),
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        routineRepository.create(routine)
+
+        val plan = createPlanFromRoutineUseCase("routine_unknown_cardio").getOrThrow()
+        val target = plan.exercises.single().plannedSets.single().targetMeasurement as MeasurementValue.LegacyUnknown
+        assertEquals(12.0, target.rawValue1, 0.001)
+        assertEquals(30.0, target.rawValue2, 0.001)
+    }
+
+    @Test
+    fun `confirming a missing plan fails without writing a new plan`() = runTest {
+        val result = confirmPlanUseCase("plan_missing")
+        assertTrue(result.isFailure)
+        assertTrue(planRepository.plans.isEmpty())
+    }
 }

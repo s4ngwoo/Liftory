@@ -1,6 +1,7 @@
 package com.example.domain.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class SessionNotesManagerTest {
@@ -32,5 +33,30 @@ class SessionNotesManagerTest {
         val updatedTitle = SessionNotesManager.setSessionTitle(notesWithBoth, "가슴 & 어깨 루틴")
         assertEquals("가슴 & 어깨 루틴", SessionNotesManager.getSessionTitle(updatedTitle))
         assertEquals("80kg 5세트 완료. 다음엔 82.5kg 도전!", SessionNotesManager.getExerciseComment(updatedTitle, "ex_bench"))
+    }
+
+    @Test
+    fun `blank comment removes the exercise tag without dropping other comments`() {
+        val withComments = SessionNotesManager.setExerciseComment("Push Day", "ex_bench", "keep this")
+        val withBoth = SessionNotesManager.setExerciseComment(withComments, "ex_incline", "temporary note")
+
+        val cleared = SessionNotesManager.setExerciseComment(withBoth, "ex_incline", "   ")
+
+        assertEquals("Push Day", SessionNotesManager.getSessionTitle(cleared))
+        assertEquals("keep this", SessionNotesManager.getExerciseComment(cleared, "ex_bench"))
+        assertEquals("", SessionNotesManager.getExerciseComment(cleared, "ex_incline"))
+        assertFalse(cleared.contains("ex_incline"))
+    }
+
+    @Test
+    fun `malformed comment tag is ignored and does not steal the session title`() {
+        val notes = "Chest Day\n[EX_COMMENT:ex_bench no closing bracket leftover"
+
+        assertEquals("Chest Day", SessionNotesManager.getSessionTitle(notes))
+        assertEquals("", SessionNotesManager.getExerciseComment(notes, "ex_bench"))
+
+        val rewritten = SessionNotesManager.setSessionTitle(notes, "New Title")
+        assertEquals("New Title", SessionNotesManager.getSessionTitle(rewritten))
+        assertEquals("", SessionNotesManager.getExerciseComment(rewritten, "ex_bench"))
     }
 }
