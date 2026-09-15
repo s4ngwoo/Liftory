@@ -88,9 +88,15 @@ fun AppNavigation(
             val sessionId = backStackEntry.arguments?.getString("sessionId") ?: return@composable
             val workoutModeViewModel = viewModel<WorkoutModeViewModel>(
                 factory = WorkoutModeViewModel.Factory(
-                    wallClock = appContainer.wallClock
+                    wallClock = appContainer.wallClock,
+                    getWorkoutSessionUseCase = appContainer.getWorkoutSessionUseCase,
+                    observeExerciseSetsUseCase = appContainer.observeExerciseSetsUseCase,
+                    observeExercisesUseCase = appContainer.observeExercisesUseCase
                 )
             )
+            androidx.compose.runtime.LaunchedEffect(sessionId) {
+                workoutModeViewModel.loadSession(sessionId)
+            }
             val uiState by workoutModeViewModel.uiState.collectAsStateWithLifecycle()
             WorkoutModeScreen(
                 state = uiState,

@@ -215,6 +215,93 @@ class WorkoutModeViewModelTest {
         assertEquals(2, vm.uiState.value.planRows.size)
     }
 
+    @Test
+    fun `loadSession binds barbell row session data and enables primary action`() = runTest {
+        val session = com.example.domain.model.WorkoutSession(
+            id = "sess_barbell",
+            startTime = 1000L,
+            notes = "등 루틴",
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        val exercise = com.example.domain.model.Exercise(
+            id = "ex_row",
+            name = "바벨 로우",
+            muscleGroup = "등"
+        )
+        val sets = listOf(
+            com.example.domain.model.ExerciseSet(
+                id = "set_1",
+                sessionId = "sess_barbell",
+                exerciseId = "ex_row",
+                orderIndex = 0,
+                weight = 70.0,
+                reps = 10,
+                isCompleted = false
+            )
+        )
+
+        val vm = WorkoutModeViewModel(
+            wallClock = clock,
+            getWorkoutSessionUseCase = com.example.application.usecase.session.GetWorkoutSessionUseCase(
+                sessionRepository = object : com.example.domain.repository.WorkoutSessionRepository {
+                    override suspend fun getById(id: String) = session
+                    override fun observeAll(): kotlinx.coroutines.flow.Flow<List<com.example.domain.model.WorkoutSession>> = kotlinx.coroutines.flow.flowOf(listOf(session))
+                    override suspend fun getActiveSession() = session
+                    override fun observeActiveSession(): kotlinx.coroutines.flow.Flow<com.example.domain.model.WorkoutSession?> = kotlinx.coroutines.flow.flowOf(session)
+                    override suspend fun create(session: com.example.domain.model.WorkoutSession) = Result.success(session)
+                    override suspend fun update(session: com.example.domain.model.WorkoutSession) = Result.success(Unit)
+                    override suspend fun delete(id: String) = Result.success(Unit)
+                }
+            ),
+            observeExerciseSetsUseCase = com.example.application.usecase.set.ObserveExerciseSetsUseCase(
+                setRepository = object : com.example.domain.repository.ExerciseSetRepository {
+                    override fun observeBySession(sessionId: String) = kotlinx.coroutines.flow.flowOf(sets)
+                    override suspend fun getBySession(sessionId: String) = sets
+                    override suspend fun create(set: com.example.domain.model.ExerciseSet) = Result.success(set)
+                    override suspend fun update(set: com.example.domain.model.ExerciseSet) = Result.success(Unit)
+                    override suspend fun delete(id: String) = Result.success(Unit)
+                    override suspend fun getLastHistoryForExercise(exerciseId: String, currentSessionId: String?) = null
+                }
+            ),
+            observeExercisesUseCase = com.example.application.usecase.exercise.ObserveExercisesUseCase(
+                exerciseRepository = object : com.example.domain.repository.ExerciseRepository {
+                    override fun observeAll() = kotlinx.coroutines.flow.flowOf(listOf(exercise))
+                    override suspend fun getById(id: String) = Result.success(exercise)
+                    override fun search(query: String) = kotlinx.coroutines.flow.flowOf(listOf(exercise))
+                    override fun getExercisesByCategory(category: String) = kotlinx.coroutines.flow.flowOf(listOf(exercise))
+                    override suspend fun create(exercise: com.example.domain.model.Exercise) = Result.success(exercise)
+                    override suspend fun update(exercise: com.example.domain.model.Exercise) = Result.success(Unit)
+                    override suspend fun delete(id: String) = Result.success(Unit)
+                }
+            )
+        )
+
+        // 처음에는 execution이 null
+        assertTrue(vm.uiState.value.planRows.isEmpty())
+
+        // loadSession 실행
+        vm.loadSession("sess_barbell")
+        advanceUntilIdle()
+
+        // 오늘 계획과 이번 종목이 바벨로우로 바인딩되었는지 검증
+        assertEquals(1, vm.uiState.value.planRows.size)
+        assertEquals("바벨 로우", vm.uiState.value.planRows[0].name)
+        assertEquals(1, vm.uiState.value.currentExerciseComparisons.size)
+        assertEquals("시작", vm.uiState.value.primaryActionLabel)
+
+        // 시작 버튼(onPrimaryAction) 클릭 시 SetExecutionState.Performing으로 전이되는지 검증
+        vm.onPrimaryAction()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.execution?.setState is SetExecutionState.Performing)
+        assertEquals("완료", vm.uiState.value.primaryActionLabel)
+
+        // 종목 대체/전환 클릭 시 에러 없이 동작 검증
+        vm.onSwitchExerciseExplicit(1, com.example.domain.model.execution.InProgressSetDisposition.SKIP_REMAINING)
+        advanceUntilIdle()
+        assertEquals(0, vm.uiState.value.execution?.currentExerciseIndex) // 1개이므로 0으로 순환
+    }
+
     private fun activeExecution() = WorkoutExecution(
         sessionId = "sess",
         planId = "plan",

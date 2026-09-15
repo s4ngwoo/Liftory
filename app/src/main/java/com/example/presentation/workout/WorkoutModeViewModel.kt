@@ -18,23 +18,41 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import com.example.application.usecase.exercise.ObserveExercisesUseCase
+import com.example.application.usecase.session.GetWorkoutSessionUseCase
+import com.example.application.usecase.set.ObserveExerciseSetsUseCase
+import kotlinx.coroutines.flow.combine
+
 /**
  * Controls the 3-page workout mode. Page changes never emit execution commands (UI-01).
  */
 class WorkoutModeViewModel(
     private val wallClock: WallClock,
     initialExecution: WorkoutExecution? = null,
-    initialPlan: SessionPlan? = null
+    initialPlan: SessionPlan? = null,
+    private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase? = null,
+    private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase? = null,
+    private val observeExercisesUseCase: ObserveExercisesUseCase? = null
 ) : ViewModel() {
 
     class Factory(
         private val wallClock: WallClock,
         private val initialExecution: WorkoutExecution? = null,
-        private val initialPlan: SessionPlan? = null
+        private val initialPlan: SessionPlan? = null,
+        private val getWorkoutSessionUseCase: GetWorkoutSessionUseCase? = null,
+        private val observeExerciseSetsUseCase: ObserveExerciseSetsUseCase? = null,
+        private val observeExercisesUseCase: ObserveExercisesUseCase? = null
     ) : androidx.lifecycle.ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return WorkoutModeViewModel(wallClock, initialExecution, initialPlan) as T
+            return WorkoutModeViewModel(
+                wallClock,
+                initialExecution,
+                initialPlan,
+                getWorkoutSessionUseCase,
+                observeExerciseSetsUseCase,
+                observeExercisesUseCase
+            ) as T
         }
     }
 
@@ -45,6 +63,37 @@ class WorkoutModeViewModel(
         ).let { rebuildDerived(it) }
     )
     val uiState: StateFlow<WorkoutModeUiState> = _uiState.asStateFlow()
+
+    fun loadSession(sessionId: String) {
+        val getSession = getWorkoutSessionUseCase ?: return
+        val observeSets = observeExerciseSetsUseCase ?: return
+        val observeExercises = observeExercisesUseCase ?: return
+
+        viewModelScope.launch {
+            val session = getSession(sessionId) ?: return@launch
+            combine(
+                observeSets(sessionId),
+                observeExercises()
+            ) { sets, exercises ->
+                com.example.application.mapper.WorkoutSessionExecutionBridge.createPlanAndExecution(
+                    session = session,
+                    sets = sets,
+                    exercises = exercises
+                )
+            }.collect { (plan, execution) ->
+                _uiState.update { current ->
+                    if (current.execution != null &&
+                        current.execution.sessionId == sessionId &&
+                        current.execution.setState !is SetExecutionState.Ready
+                    ) {
+                        rebuildDerived(current.copy(plan = plan))
+                    } else {
+                        rebuildDerived(current.copy(execution = execution, plan = plan))
+                    }
+                }
+            }
+        }
+    }
 
     fun onSelectPage(page: WorkoutModePage) {
         _uiState.update { state ->
@@ -168,8 +217,15 @@ class WorkoutModeViewModel(
         disposition: InProgressSetDisposition
     ) {
         val execution = _uiState.value.execution ?: return
+        val plan = _uiState.value.plan
+        val exerciseCount = plan?.exercises?.size ?: 0
+        val safeIndex = if (exerciseCount > 0) {
+            targetExerciseIndex % exerciseCount
+        } else {
+            targetExerciseIndex
+        }
         val controller = SessionExecutionController(execution)
-        val result = controller.switchExercise(targetExerciseIndex, disposition)
+        val result = controller.switchExercise(safeIndex, disposition)
         result.onSuccess { updated ->
             _uiState.update { rebuildDerived(it.copy(execution = updated)) }
         }

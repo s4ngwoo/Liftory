@@ -35,6 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.text.font.FontWeight
 
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+
 /**
  * Stateless 3-page workout mode shell (N06).
  * Pager index maps to [WorkoutModePage], never to exercise index.
@@ -65,8 +69,8 @@ fun WorkoutModeScreen(
         }
     }
 
-    LaunchedEffect(pagerState.settledPage) {
-        val page = pages[pagerState.settledPage]
+    LaunchedEffect(pagerState.currentPage) {
+        val page = pages[pagerState.currentPage]
         if (page != state.displayPage) {
             onSelectPage(page)
         }
@@ -103,10 +107,20 @@ fun WorkoutModeScreen(
                     .testTag("error_banner")
             )
         }
-        ScrollableTabRow(selectedTabIndex = state.displayPage.ordinal) {
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            indicator = { tabPositions ->
+                if (pagerState.currentPage < tabPositions.size) {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        ) {
             pages.forEachIndexed { index, page ->
                 Tab(
-                    selected = state.displayPage == page,
+                    selected = pagerState.currentPage == index,
                     onClick = {
                         onSelectPage(page)
                         scope.launch { pagerState.animateScrollToPage(index) }
