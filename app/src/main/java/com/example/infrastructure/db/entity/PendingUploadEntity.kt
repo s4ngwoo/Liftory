@@ -8,12 +8,14 @@ import androidx.room.PrimaryKey
     tableName = "pending_uploads",
     indices = [
         Index(value = ["createdAt"]),
-        Index(value = ["retryCount"])
+        Index(value = ["retryCount"]),
+        Index(value = ["userId", "createdAt"])
     ]
 )
 data class PendingUploadEntity(
     @PrimaryKey
     val id: String,
+    val userId: String,
     val entityType: String,
     val entityId: String,
     val operation: String,

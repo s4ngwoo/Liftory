@@ -20,6 +20,7 @@ class SyncConflictAndBoundaryTest {
         val outbox = InMemorySyncOutbox()
         val upload = PendingUpload(
             id = "cmd_1",
+            userId = "user_A",
             entityType = EntityType.SESSION,
             entityId = "sess_1",
             operation = SyncOperation.CREATE,
@@ -41,6 +42,7 @@ class SyncConflictAndBoundaryTest {
 
         val upload = PendingUpload(
             id = "cmd_dup_1",
+            userId = "user_A",
             entityType = EntityType.SESSION,
             entityId = "sess_dup",
             operation = SyncOperation.CREATE,
@@ -126,6 +128,7 @@ class SyncConflictAndBoundaryTest {
         val outbox = InMemorySyncOutbox()
         val uploadA = PendingUpload(
             id = "cmd_A",
+            userId = "user_A",
             entityType = EntityType.SESSION,
             entityId = "sess_A",
             operation = SyncOperation.CREATE,
@@ -136,6 +139,14 @@ class SyncConflictAndBoundaryTest {
         // Switch to user B
         val pendingB = outbox.getPending(userId = "user_B")
         assertTrue("User B must never see or upload user A's pending queue", pendingB.isEmpty())
+    }
+
+    @Test
+    fun `SYNC-06 production push gate refuses current uid when outbox belongs to another user`() {
+        assertTrue(SyncOutboxOwnerGate.canPush("user_A", "user_A"))
+        assertFalse(SyncOutboxOwnerGate.canPush("user_A", "user_B"))
+        assertFalse(SyncOutboxOwnerGate.canPush("user_A", null))
+        assertFalse(SyncOutboxOwnerGate.canPush("", "user_B"))
     }
 
     @Test

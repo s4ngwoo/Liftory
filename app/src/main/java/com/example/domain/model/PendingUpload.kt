@@ -15,6 +15,7 @@ enum class SyncOperation {
 
 data class PendingUpload(
     val id: String,
+    val userId: String,
     val entityType: EntityType,
     val entityId: String,
     val operation: SyncOperation,

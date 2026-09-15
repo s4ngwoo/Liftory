@@ -53,6 +53,7 @@ class FirebaseOfflineFallbackTest {
 
         val pending = PendingUpload(
             id = "pending_1",
+            userId = "user_123",
             entityType = EntityType.SESSION,
             entityId = "session_1",
             operation = SyncOperation.CREATE,
@@ -67,6 +68,31 @@ class FirebaseOfflineFallbackTest {
         val exception = result.exceptionOrNull()
         assertTrue(exception is IllegalStateException)
         assertTrue(exception?.message?.contains("Firebase is not initialized") == true)
+    }
+
+    @Test
+    fun `FirestoreSyncDataSource refuses to push another user's outbox under the current uid`() = runTest {
+        val mockAuthRepo = object : AuthRepository {
+            override val authState = kotlinx.coroutines.flow.MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+            override suspend fun signInWithGoogle(idToken: String) = Result.success(Unit)
+            override suspend fun signOut() = Result.success(Unit)
+            override fun getCurrentUserId(): String? = "user_B"
+        }
+        val dataSource = FirestoreSyncDataSource(firestore = null, authRepository = mockAuthRepo)
+
+        val pendingFromA = PendingUpload(
+            id = "pending_a",
+            userId = "user_A",
+            entityType = EntityType.SESSION,
+            entityId = "session_a",
+            operation = SyncOperation.CREATE,
+            payloadJson = """{"notes":"secret A"}"""
+        )
+
+        val result = dataSource.sync(pendingFromA)
+
+        assertTrue(result.isFailure)
+        assertEquals("Outbox owner mismatch", result.exceptionOrNull()?.message)
     }
 
     @Test

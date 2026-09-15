@@ -21,8 +21,8 @@ class SyncQueueRepositoryImpl(
         }
     }
 
-    override suspend fun getNextPending(limit: Int): List<PendingUpload> = withContext(ioDispatcher) {
-        pendingUploadDao.getNextPending(limit).map { it.toDomain() }
+    override suspend fun getNextPending(userId: String, limit: Int): List<PendingUpload> = withContext(ioDispatcher) {
+        pendingUploadDao.getNextPending(userId, limit).map { it.toDomain() }
     }
 
     override suspend fun markCompleted(id: String): Result<Unit> = withContext(ioDispatcher) {
@@ -33,8 +33,7 @@ class SyncQueueRepositoryImpl(
 
     override suspend fun markFailed(id: String, error: String): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
-            val pendingList = pendingUploadDao.getNextPending(100)
-            val item = pendingList.find { it.id == id }
+            val item = pendingUploadDao.getById(id)
             if (item != null) {
                 pendingUploadDao.update(
                     item.copy(

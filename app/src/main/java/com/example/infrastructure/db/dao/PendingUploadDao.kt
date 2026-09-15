@@ -13,8 +13,11 @@ interface PendingUploadDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(pendingUpload: PendingUploadEntity)
 
-    @Query("SELECT * FROM pending_uploads ORDER BY createdAt ASC LIMIT :limit")
-    suspend fun getNextPending(limit: Int): List<PendingUploadEntity>
+    @Query("SELECT * FROM pending_uploads WHERE userId = :userId ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun getNextPending(userId: String, limit: Int): List<PendingUploadEntity>
+
+    @Query("SELECT * FROM pending_uploads WHERE id = :id")
+    suspend fun getById(id: String): PendingUploadEntity?
 
     @Query("DELETE FROM pending_uploads WHERE id = :id")
     suspend fun deleteById(id: String)

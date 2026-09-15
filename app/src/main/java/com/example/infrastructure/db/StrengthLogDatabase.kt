@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
         ExerciseEntity::class,
         PendingUploadEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class StrengthLogDatabase : RoomDatabase() {
@@ -54,6 +54,15 @@ abstract class StrengthLogDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pending_uploads ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_pending_uploads_userId_createdAt ON pending_uploads(userId, createdAt)"
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: StrengthLogDatabase? = null
 
@@ -64,7 +73,7 @@ abstract class StrengthLogDatabase : RoomDatabase() {
                     StrengthLogDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 scope.launch {
