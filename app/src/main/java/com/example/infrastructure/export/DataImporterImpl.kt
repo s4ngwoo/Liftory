@@ -59,16 +59,25 @@ class DataImporterImpl(
                 }
             }
 
-            // 3. Perform inserts
+            // 3. Merge inserts: skip rows that already exist.
+            // WorkoutSessionDao.insert uses OnConflictStrategy.REPLACE, which SQLite
+            // implements as DELETE + INSERT. That fires ON DELETE CASCADE on
+            // exercise_sets and would wipe local sets (including ones not in the file)
+            // if we replaced an existing session. Set REPLACE would also overwrite
+            // locally edited weight/reps with stale backup values.
             var importedCount = 0
             for (session in payload.sessions) {
-                sessionDao.insert(session)
-                importedCount++
+                if (sessionDao.getById(session.id) == null) {
+                    sessionDao.insert(session)
+                    importedCount++
+                }
             }
 
             for (set in payload.sets) {
-                setDao.insert(set)
-                importedCount++
+                if (setDao.getById(set.id) == null) {
+                    setDao.insert(set)
+                    importedCount++
+                }
             }
 
             Result.success(importedCount)
@@ -122,6 +131,7 @@ class DataImporterImpl(
 
             var importedCount = 0
             val now = System.currentTimeMillis()
+            val newSessionIds = mutableSetOf<String>()
             for ((sessionId, startTime) in sessionMap) {
                 val existing = sessionDao.getById(sessionId)
                 if (existing == null) {
@@ -135,13 +145,20 @@ class DataImporterImpl(
                             updatedAt = now
                         )
                     )
+                    newSessionIds.add(sessionId)
+                    importedCount++
                 }
-                importedCount++
             }
 
+            // CSV rows have no stable set ids, so each restore mints new UUIDs.
+            // Re-importing into a session that already exists would duplicate every
+            // performed set and inflate volume/PRs. Only attach CSV sets to sessions
+            // created by this restore.
             for (set in setsToInsert) {
-                setDao.insert(set)
-                importedCount++
+                if (set.sessionId in newSessionIds) {
+                    setDao.insert(set)
+                    importedCount++
+                }
             }
 
             Result.success(importedCount)
